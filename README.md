@@ -1,70 +1,79 @@
+<div align="center">
+
 # kufiMaker ✦
 
-> Square Kufic Script Editor — Free, in your browser
+**Square Kufic Script Editor — محرر الخط الكوفي المربع**
 
-**[🚀 Try it live](https://stop7orgo.github.io/kufiMaker/)**
+[🚀 Try it live / جرّب مباشرة](https://stop7orgo.github.io/kufiMaker/)
 
----
-## What is kufiMaker?
+![demo](screenshots/demo.png)
 
-kufiMaker is a free web tool for designing Square Kufic calligraphy
-directly in your browser — no installation required.
-
-Square Kufic (Kufi Murabbi) is a classical Arabic calligraphic style
-built on a grid of connected squares. It has been used for centuries
-in Islamic architecture, geometric ornamentation, and decorative art.
+</div>
 
 ---
 
-## Features
+## English
 
-- 🎨 **Customizable grid** — cell size, gap, corner radius
-- ✍️ **Letter library** — save and reuse your own letter designs
-- 🖼️ **Reference image** — place an image behind the grid to trace
-- 📦 **PNG export** — clean or with background
-- 💾 **JSON save/load** — save your project and resume later
-- 🔄 **Undo / Redo** — full edit history
-- 📱 **Works on mobile and desktop**
-- ⚡ **No dependencies** — single HTML file, works offline
+kufiMaker is a free browser-based tool for designing Square Kufic calligraphy.
+No installation. No account. Just open and start designing.
 
----
+### Features
+- 🎨 Customizable grid — size, gaps, corner radius
+- ✍️ Letter library — save and reuse letter designs
+- 🖼️ Reference image — trace over any image
+- 📦 PNG export — clean or with background
+- 💾 Save / Load — JSON project files
+- 🔄 Undo / Redo
+- 📱 Works on mobile and desktop
+- ⚡ Single HTML file — works offline
 
-## How to use
-
+### How to use
 1. Open the link in any browser
-2. Set your grid size from the **Grid** panel
-3. Draw by clicking on cells
-4. Insert ready-made letters from the **Letters** panel
-5. Export your work as PNG
+2. Set grid size from the **Grid** panel
+3. Draw by clicking cells
+4. Add letters from the **Letters** panel
+5. Export as PNG
+
+---
+
+## العربية
+
+kufiMaker أداة ويب مجانية لتصميم الخط الكوفي المربع في المتصفح مباشرة.
+بدون تثبيت، بدون تسجيل.
+
+### المميزات
+- 🎨 شبكة قابلة للتخصيص — حجم الخلايا والفجوات والاستدارة
+- ✍️ مكتبة حروف — احفظ حروفك وأعد استخدامها
+- 🖼️ صورة مرجعية — ضع صورة خلف الشبكة للنسخ عنها
+- 📦 تصدير PNG — نظيف أو مع الخلفية
+- 💾 حفظ وفتح — ملفات JSON
+- 🔄 تراجع وتقديم
+- 📱 يعمل على الجوال والحاسوب
+- ⚡ ملف HTML واحد — يعمل بدون إنترنت
+
+### كيف تستخدمه
+1. افتح الرابط في أي متصفح
+2. حدد حجم الشبكة من قائمة **شبكة**
+3. ارسم بالنقر على الخلايا
+4. أضف حروفاً من قائمة **حروف**
+5. صدّر عملك PNG
 
 ---
 
 ## Screenshots
 
-<!-- Add your screenshots here -->
-![kufiMaker screenshot](screenshots/demo.png)
+![screenshot 1](screenshots/demo.png)
+![screenshot 2](screenshots/demo-1.png)
+
 
 ---
 
-## Built with
+## License / الترخيص
 
-- Pure HTML + CSS + JavaScript — zero frameworks, zero libraries
-- Fully offline after first load
-- Single file: `index.html`
+MIT — use freely / استخدم بحرية مع الإشارة للمصدر
 
 ---
 
-## Contributing
-
-Found a bug or have a suggestion? Open an
-[Issue](../../issues) or submit a Pull Request.
-
----
-
-## License
-
-MIT License — use freely with attribution.
-
----
-
-*Made with ♥ for Arabic calligraphy*
+<div align="center">
+Made with ♥ for Arabic calligraphy
+</div>
