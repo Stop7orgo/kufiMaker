@@ -6,8 +6,6 @@
 
 [🚀 Try it live / جرّب مباشرة](https://stop7orgo.github.io/kufiMaker/)
 
-![demo](screenshots/demo.png)
-
 </div>
 
 ---
@@ -62,9 +60,7 @@ kufiMaker أداة ويب مجانية لتصميم الخط الكوفي الم
 
 ## Screenshots
 
-![screenshot 1](screenshots/demo.png)
-![screenshot 2](screenshots/demo-1.png)
-
+![screenshot 1](screenshots/demo.png) | ![screenshot 2](screenshots/grid.png)
 
 ---
 
