@@ -4,6 +4,20 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>kufiMaker</title>
+<link rel="icon" type="image/x-icon" href="screenshots/kufimaker.ico"/>
+<!-- SEO Basic -->
+<meta name="description" content="kufiMaker — محرر الخط الكوفي المربع مجاناً. صمم حروف كوفية pixel art بشكل احترافي مباشرة في المتصفح بدون تثبيت."/>
+<meta name="keywords" content="خط كوفي, كوفي مربع, محرر خط عربي, pixel art عربي, kufi, arabic calligraphy, kufi square, free arabic font tool"/>
+<meta name="author" content="اسمك"/>
+<link rel="canonical" href="https://اسم-المستخدم.github.io/kufimaker/"/>
+
+<!-- Open Graph — يجعل المشاركة في واتساب وتويتر تظهر بصندوق جميل -->
+<meta property="og:title" content="kufiMaker — محرر الخط الكوفي المربع"/>
+<meta property="og:description" content="أنشئ حروفاً كوفية مربعة احترافية مجاناً في متصفحك"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://اسم-المستخدم.github.io/kufimaker/"/>
+<meta property="og:locale" content="ar_SA"/>
+
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -216,8 +230,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* bg-frame base */
 .bg-frame{position:absolute;box-sizing:border-box;pointer-events:auto;z-index:5;touch-action:none;}
-#coordsBar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:10;}
-#zoomCtrl{position:absolute;bottom:8px;right:8px;display:flex;gap:4px;z-index:10;}
+#coordsBar{position:absolute;bottom:10px;left:12px;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:10;}
+#zoomCtrl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:10;}
 .zoom-btn{width:30px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 #zoomLevel{padding:0 8px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;display:flex;align-items:center;}
 
@@ -627,6 +641,7 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
         <button class="lib-icon-btn" id="btnAddLetter" title="حرف جديد">+</button>
         <button class="lib-icon-btn" id="btnExportLib" title="تصدير JSON">↑</button>
         <button class="lib-icon-btn" id="btnImportLib" title="استيراد JSON">↓</button>
+        <button class="lib-icon-btn" id="btnResetLib" title="إعادة للافتراضي" style="color:#ef4444;">↺</button>
         <input type="file" id="importLibFile" accept=".json" style="display:none"/>
       </div>
       <div id="letterLibrary"></div>
@@ -755,38 +770,6 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
    ✓ Smart corner radius (connected shapes look joined)
    ✓ Default: 24×24, cellSz=30, gap=15, rad=5
 ═══════════════════════════════════════════════════ */
-
-const KUFIC={
-  "ا":{name:"ألف",m:[[0,1],[1,1],[1,0],[1,0],[1,0]]},
-  "ب":{name:"باء",m:[[1,1,1,1],[1,0,0,0],[1,1,1,1],[1,0,0,1],[1,1,1,1]]},
-  "ت":{name:"تاء",m:[[1,0,1],[1,1,1],[1,0,0],[1,1,1],[0,0,1]]},
-  "ث":{name:"ثاء",m:[[1,0,1,0,1],[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,1,0]]},
-  "ج":{name:"جيم",m:[[0,1,1,1],[1,0,0,0],[1,1,1,1],[1,0,0,0],[0,1,1,1]]},
-  "ح":{name:"حاء",m:[[1,0,1],[1,0,1],[1,1,1],[1,0,0],[1,0,0]]},
-  "خ":{name:"خاء",m:[[1,0,1,0],[1,1,1,0],[1,0,1,0],[1,0,0,0],[1,0,0,1]]},
-  "د":{name:"دال",m:[[1,1,1,1],[0,0,0,1],[0,0,0,1],[0,0,0,1],[1,1,1,1]]},
-  "ذ":{name:"ذال",m:[[1,1,1,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,1],[1,1,1,1,0]]},
-  "ر":{name:"راء",m:[[1,1,1],[1,0,0],[1,0,0],[1,0,0],[0,1,1]]},
-  "ز":{name:"زاي",m:[[1,1,1,0],[1,0,0,0],[1,0,0,0],[1,0,0,1],[0,1,1,0]]},
-  "س":{name:"سين",m:[[1,0,1,0,1],[1,0,1,0,1],[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,1]]},
-  "ش":{name:"شين",m:[[1,0,1,0,1],[1,1,1,1,1],[1,0,1,0,1],[1,0,0,0,0],[1,1,1,1,1]]},
-  "ص":{name:"صاد",m:[[0,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,1,1,1]]},
-  "ض":{name:"ضاد",m:[[0,1,1,0,1],[1,0,0,1,0],[1,1,1,1,0],[1,0,0,0,0],[1,1,1,1,0]]},
-  "ط":{name:"طاء",m:[[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]]},
-  "ظ":{name:"ظاء",m:[[1,0,1,0],[1,1,1,0],[1,0,1,0],[1,0,1,1],[1,1,1,0]]},
-  "ع":{name:"عين",m:[[0,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]]},
-  "غ":{name:"غين",m:[[0,1,1,0],[1,0,0,0],[1,1,1,0],[1,0,1,0],[1,1,1,1]]},
-  "ف":{name:"فاء",m:[[1,1,1,1],[1,0,0,0],[1,1,1,1],[0,0,0,1],[1,1,1,1]]},
-  "ق":{name:"قاف",m:[[0,1,0,1],[1,1,1,1],[1,0,0,1],[1,0,0,1],[0,1,1,0]]},
-  "ك":{name:"كاف",m:[[1,0,0,1],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,1,1,1]]},
-  "ل":{name:"لام",m:[[1,0,0,1],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,0,0,0]]},
-  "م":{name:"ميم",m:[[1,1,1,1],[1,0,0,1],[1,1,1,1],[1,0,0,1],[1,1,1,1]]},
-  "ن":{name:"نون",m:[[1,1,1,1],[1,0,0,1],[1,1,1,1],[0,0,0,1],[0,0,0,1]]},
-  "ه":{name:"هاء",m:[[0,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,1],[0,1,1,0]]},
-  "و":{name:"واو",m:[[0,1,1,0],[1,0,0,1],[0,1,1,1],[0,0,0,1],[0,0,1,0]]},
-  "ي":{name:"ياء",m:[[1,1,1,1],[0,0,0,1],[1,1,1,1],[1,0,0,0],[0,1,1,1]]},
-  "لا":{name:"لا",m:[[1,0,0,1,1],[1,0,0,0,1],[1,1,1,1,1],[0,0,0,0,1],[0,0,1,1,1]]}
-};
 
 /* ══════════ STATE ══════════ */
 let cols=24, rows=24;
@@ -1512,86 +1495,167 @@ vp.addEventListener('wheel',e=>{
    LETTER LIBRARY — IndexedDB + Editor
 ══════════════════════════════════════════════ */
 
-/* ── IndexedDB ── */
-let lettersDB = null;
-let CUSTOM_LETTERS = {}; // merged: built-in + custom (custom overrides)
+/* ══════════ LETTER LIBRARY — External JSON + IndexedDB ══════════
+   Flow:
+   1. openDB()  — open IndexedDB 'KufiLetters' v2
+   2. First run: fetch letters.json → seed DB (store._default + user overrides)
+   3. loadMergedLetters() — merge defaults + user overrides → CUSTOM_LETTERS
+   4. User edits → saved to DB as user overrides (ch key)
+   5. "Reset to default" → delete all user overrides, reload defaults
+══════════════════════════════════════════════════════════════════ */
 
+let lettersDB = null;
+let CUSTOM_LETTERS = {};
+let DEFAULT_LETTERS = {}; // loaded from letters.json, immutable at runtime
+
+/* ── IndexedDB ── */
 function openDB(){
   return new Promise((res,rej)=>{
-    const req = indexedDB.open('KufiLetters',1);
+    const req = indexedDB.open('KufiLetters', 2);
     req.onupgradeneeded = e => {
       const db = e.target.result;
+      // letters store: user overrides keyed by ch
       if(!db.objectStoreNames.contains('letters'))
-        db.createObjectStore('letters',{keyPath:'ch'});
+        db.createObjectStore('letters', {keyPath:'ch'});
+      // meta store: flags like _defaultVersion
+      if(!db.objectStoreNames.contains('meta'))
+        db.createObjectStore('meta', {keyPath:'k'});
     };
-    req.onsuccess = e => { lettersDB=e.target.result; res(lettersDB); };
-    req.onerror   = ()=>rej(req.error);
-  });
-}
-function dbGetAll(){
-  return new Promise(res=>{
-    const tx=lettersDB.transaction('letters','readonly');
-    const req=tx.objectStore('letters').getAll();
-    req.onsuccess=()=>res(req.result||[]);
-    req.onerror=()=>res([]);
-  });
-}
-function dbPut(obj){
-  return new Promise(res=>{
-    const tx=lettersDB.transaction('letters','readwrite');
-    tx.objectStore('letters').put(obj);
-    tx.oncomplete=()=>res();
-  });
-}
-function dbDelete(ch){
-  return new Promise(res=>{
-    const tx=lettersDB.transaction('letters','readwrite');
-    tx.objectStore('letters').delete(ch);
-    tx.oncomplete=()=>res();
+    req.onsuccess = e => { lettersDB = e.target.result; res(lettersDB); };
+    req.onerror   = () => rej(req.error);
   });
 }
 
+function dbGetAll(store='letters'){
+  return new Promise(res=>{
+    const tx = lettersDB.transaction(store,'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result||[]);
+    req.onerror   = () => res([]);
+  });
+}
+function dbGet(key, store='meta'){
+  return new Promise(res=>{
+    const tx = lettersDB.transaction(store,'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result||null);
+    req.onerror   = () => res(null);
+  });
+}
+function dbPut(obj, store='letters'){
+  return new Promise(res=>{
+    const tx = lettersDB.transaction(store,'readwrite');
+    tx.objectStore(store).put(obj);
+    tx.oncomplete = () => res();
+    tx.onerror    = () => res();
+  });
+}
+function dbDelete(ch, store='letters'){
+  return new Promise(res=>{
+    const tx = lettersDB.transaction(store,'readwrite');
+    tx.objectStore(store).delete(ch);
+    tx.oncomplete = () => res();
+  });
+}
+function dbClearStore(store='letters'){
+  return new Promise(res=>{
+    const tx = lettersDB.transaction(store,'readwrite');
+    tx.objectStore(store).clear();
+    tx.oncomplete = () => res();
+  });
+}
+
+/* ── Fetch default letters.json ── */
+async function fetchDefaultLetters(){
+  try{
+    // Build URL relative to the HTML file location (works on GitHub Pages /repo/ paths)
+    const base = document.currentScript?.src
+      ? new URL('.', document.currentScript.src).href
+      : new URL('.', location.href).href;
+    const url = new URL('letters.json', base).href;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('not found');
+    const json = await r.json();
+    return json.letters || {};
+  }catch(e){
+    console.warn('letters.json not found, library will be empty');
+    return {};
+  }
+}
+
+/* ── Seed DB on first run (or when default version changes) ── */
+async function seedDefaultsIfNeeded(){
+  const defaults = await fetchDefaultLetters();
+  DEFAULT_LETTERS = defaults;
+  const meta = await dbGet('_defaultVersion');
+  const currentVer = 1; // bump this when you update letters.json
+  if(!meta || meta.v !== currentVer){
+    // First time or version changed — nothing to clear
+    // (user overrides stay, we just update our in-memory defaults)
+    await dbPut({k:'_defaultVersion', v: currentVer}, 'meta');
+  }
+}
+
+/* ── Build CUSTOM_LETTERS: defaults merged with user overrides ── */
 async function loadMergedLetters(){
-  const saved = await dbGetAll();
+  await seedDefaultsIfNeeded();
+  const userOverrides = await dbGetAll('letters');
   CUSTOM_LETTERS = {};
-  // Built-ins (no gaps — legacy, gH/gV/gD default to empty)
-  Object.entries(KUFIC).forEach(([k,v])=>{
-    const rows=v.m.length, cols=v.m[0].length;
-    CUSTOM_LETTERS[k]={
-      name:v.name, m:v.m,
-      gH:Array.from({length:rows-1},()=>Array(cols).fill(0)),
-      gV:Array.from({length:rows},()=>Array(cols-1).fill(0)),
-      gD:Array.from({length:rows-1},()=>Array(cols-1).fill(0)),
-      _builtin:true
+
+  // 1. Load defaults
+  Object.entries(DEFAULT_LETTERS).forEach(([ch, v])=>{
+    const rows = v.m.length, cols = v.m[0]?.length||1;
+    CUSTOM_LETTERS[ch] = {
+      name: v.name,
+      m:    v.m,
+      gH:   v.gH || Array.from({length:rows-1}, ()=>Array(cols).fill(0)),
+      gV:   v.gV || Array.from({length:rows},   ()=>Array(cols-1).fill(0)),
+      gD:   v.gD || Array.from({length:rows-1}, ()=>Array(cols-1).fill(0)),
+      _builtin: true
     };
   });
-  // Overlay saved (custom + modified built-ins)
-  saved.forEach(obj=>{
-    const rows=obj.m.length, cols=obj.m[0]?.length||1;
-    CUSTOM_LETTERS[obj.ch]={
-      name:obj.name, m:obj.m,
-      gH: obj.gH || Array.from({length:rows-1},()=>Array(cols).fill(0)),
-      gV: obj.gV || Array.from({length:rows},()=>Array(cols-1).fill(0)),
-      gD: obj.gD || Array.from({length:rows-1},()=>Array(cols-1).fill(0)),
-      _builtin:false
+
+  // 2. Overlay user overrides (user edits win)
+  userOverrides.forEach(obj=>{
+    const rows = obj.m.length, cols = obj.m[0]?.length||1;
+    CUSTOM_LETTERS[obj.ch] = {
+      name: obj.name, m: obj.m,
+      gH:   obj.gH || Array.from({length:rows-1}, ()=>Array(cols).fill(0)),
+      gV:   obj.gV || Array.from({length:rows},   ()=>Array(cols-1).fill(0)),
+      gD:   obj.gD || Array.from({length:rows-1}, ()=>Array(cols-1).fill(0)),
+      _builtin: false
     };
   });
 }
 
-async function saveLetterToDB(ch, name, m){ // legacy compat
-  await dbPut({ch,name,m,gH:[],gV:[],gD:[]});
-  CUSTOM_LETTERS[ch]={name,m,gH:[],gV:[],gD:[],_builtin:false};
+async function saveLetterToDB(ch, name, m){
+  await dbPut({ch, name, m, gH:[], gV:[], gD:[]});
+  CUSTOM_LETTERS[ch] = {name, m, gH:[], gV:[], gD:[], _builtin:false};
 }
+
 async function deleteLetterFromDB(ch){
   await dbDelete(ch);
-  if(KUFIC[ch]){
-    const v=KUFIC[ch]; const rows=v.m.length,cols=v.m[0].length;
-    CUSTOM_LETTERS[ch]={name:v.name,m:v.m,
-      gH:Array.from({length:rows-1},()=>Array(cols).fill(0)),
-      gV:Array.from({length:rows},()=>Array(cols-1).fill(0)),
-      gD:Array.from({length:rows-1},()=>Array(cols-1).fill(0)),
-      _builtin:true};
-  } else delete CUSTOM_LETTERS[ch];
+  // Restore from defaults if it exists there
+  if(DEFAULT_LETTERS[ch]){
+    const v = DEFAULT_LETTERS[ch];
+    const rows = v.m.length, cols = v.m[0].length;
+    CUSTOM_LETTERS[ch] = {
+      name: v.name, m: v.m,
+      gH: v.gH || Array.from({length:rows-1}, ()=>Array(cols).fill(0)),
+      gV: v.gV || Array.from({length:rows},   ()=>Array(cols-1).fill(0)),
+      gD: v.gD || Array.from({length:rows-1}, ()=>Array(cols-1).fill(0)),
+      _builtin: true
+    };
+  } else {
+    delete CUSTOM_LETTERS[ch];
+  }
+}
+
+/* ── Reset ALL user overrides → back to letters.json ── */
+async function resetToDefaults(){
+  await dbClearStore('letters');
+  await loadMergedLetters();
+  buildLetters($id('libSearch').value);
 }
 
 /* ── Build Library UI ── */
@@ -1923,6 +1987,13 @@ $id('leDeleteBtn').addEventListener('click',async()=>{
 
 /* ── Export / Import ── */
 $id('btnAddLetter').addEventListener('click',()=>openEditor(null));
+
+// Reset to defaults
+$id('btnResetLib').addEventListener('click',async()=>{
+  if(!confirm('إعادة جميع الحروف للشكل الافتراضي؟\nسيتم حذف كل تعديلاتك على الحروف.')) return;
+  await resetToDefaults();
+  alert('✓ تم استعادة الحروف الافتراضية');
+});
 
 $id('btnExportLib').addEventListener('click',()=>{
   const all={};
