@@ -1,109 +1,122 @@
 /* ═══════════════════════════════════════════════════
-   kufiMaker — Service Worker
+   kufiMaker — Service Worker v2
    Strategy:
-   - Cache-first for app shell (index.html, letters.json, fonts)
-   - Network-first for everything else
-   ═══════════════════════════════════════════════════ */
+   · Cache-first  → app shell (HTML, letters.json, icons)
+   · Stale-while-revalidate → Google Fonts
+   · Network-first → everything else
+   · Query params (?new=1, ?view=letters) → always serve index.html
+═══════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'kufimaker-v1';
-const BASE = '/kufiMaker';
+const CACHE = 'kufimaker-v2';
+const BASE  = '/kufiMaker';
 
-// Files to cache on install (app shell)
 const PRECACHE = [
   BASE + '/',
   BASE + '/index.html',
   BASE + '/letters.json',
-  // Google Fonts (cached on first load)
-  'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap'
+  BASE + '/manifest.json',
+  BASE + '/icons/icon-192.png',
+  BASE + '/icons/icon-512.png',
+  BASE + '/icons/icon-512-maskable.png',
+  BASE + '/icons/new-192.png',
+  BASE + '/icons/letters-192.png',
 ];
 
-// ── Install: pre-cache app shell ──────────────────
+/* ── Install ─────────────────────────────────────── */
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      // Cache same-origin files strictly, fonts with no-cors
-      return Promise.allSettled(
-        PRECACHE.map(url => {
-          const req = url.startsWith('http')
-            ? new Request(url, { mode: 'no-cors' })
-            : new Request(url);
-          return cache.add(req).catch(() => {
-            // Non-critical: don't fail install if one resource misses
-            console.warn('[SW] Failed to cache:', url);
-          });
-        })
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE).then(cache =>
+      Promise.allSettled(
+        PRECACHE.map(url =>
+          cache.add(url).catch(() => console.warn('[SW] skip:', url))
+        )
+      )
+    ).then(() => self.skipWaiting())
   );
 });
 
-// ── Activate: delete old caches ───────────────────
+/* ── Activate ────────────────────────────────────── */
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// ── Fetch: cache-first for shell, network-first otherwise ──
+/* ── Fetch ───────────────────────────────────────── */
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return;
-
-  // Skip chrome-extension and non-http requests
+  const url = new URL(req.url);
   if (!url.protocol.startsWith('http')) return;
 
-  // ── App shell & letters.json → Cache-first ──
+  /* Shortcut URLs → strip query, serve index.html */
+  if (
+    url.origin === self.location.origin &&
+    url.pathname === BASE + '/' &&
+    url.search
+  ) {
+    event.respondWith(
+      caches.match(BASE + '/index.html')
+        .then(cached => cached || fetch(BASE + '/index.html'))
+    );
+    return;
+  }
+
+  /* Google Fonts → stale-while-revalidate */
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(staleWhileRevalidate(req));
+    return;
+  }
+
+  /* App shell & assets → cache-first */
   const isShell =
     url.pathname === BASE + '/' ||
     url.pathname === BASE + '/index.html' ||
-    url.pathname === BASE + '/letters.json';
+    url.pathname === BASE + '/letters.json' ||
+    url.pathname === BASE + '/manifest.json' ||
+    url.pathname.startsWith(BASE + '/icons/');
 
   if (isShell) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => {
-          // Offline fallback: return cached index.html
-          return caches.match(BASE + '/index.html');
-        });
-      })
-    );
+    event.respondWith(cacheFirst(req));
     return;
   }
 
-  // ── Google Fonts → Cache-first (stale-while-revalidate) ──
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        const networkFetch = fetch(event.request).then(response => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => cached);
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
+  /* Everything else → network-first */
+  event.respondWith(fetch(req).catch(() => caches.match(req)));
+});
 
-  // ── Everything else → Network-first ──
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
+/* ── Helpers ─────────────────────────────────────── */
+async function cacheFirst(req) {
+  const cached = await caches.match(req);
+  if (cached) return cached;
+  try {
+    const res = await fetch(req);
+    if (res && res.status === 200) {
+      const cache = await caches.open(CACHE);
+      cache.put(req, res.clone());
+    }
+    return res;
+  } catch {
+    return caches.match(BASE + '/index.html');
+  }
+}
+
+async function staleWhileRevalidate(req) {
+  const cache  = await caches.open(CACHE);
+  const cached = await cache.match(req);
+  const fresh  = fetch(req).then(res => {
+    if (res && res.status === 200) cache.put(req, res.clone());
+    return res;
+  }).catch(() => cached);
+  return cached || fresh;
+}
+
+/* force update from client */
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
