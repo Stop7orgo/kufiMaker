@@ -6,13 +6,13 @@
 <title>kufiMaker</title>
 
 <!-- ── Favicon ── -->
-<link rel="icon" type="image/x-icon" href="https://ab7dz.github.io/kufiMaker/icons/kufimaker.ico"/>
+<link rel="icon" type="image/x-icon" href="screenshots/kufimaker.ico"/>
 
 <!-- ── PWA Manifest ── -->
 <link rel="manifest" href="manifest.json"/>
 
 <!-- ── PWA Meta Tags ── -->
-<meta name="theme-color" content="#111318"/>
+<meta name="theme-color" content="#F5A623"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -25,16 +25,6 @@
 
 <!-- ── SEO ── -->
 <meta name="description" content="kufiMaker — محرر الخط الكوفي المربع مجاناً في المتصفح. Square Kufic Script Editor."/>
-<meta name="keywords" content="خط كوفي, كوفي مربع, محرر خط عربي, pixel art عربي, kufi, arabic calligraphy, kufi square, free arabic font tool"/>
-<meta name="author" content="اسمك"/>
-<link rel="canonical" href="https://ab7dz.github.io/kufimaker/"/>
-
-<!-- Open Graph — يجعل المشاركة في واتساب وتويتر تظهر بصندوق جميل -->
-<meta property="og:title" content="kufiMaker — محرر الخط الكوفي المربع"/>
-<meta property="og:description" content="أنشئ حروفاً كوفية مربعة احترافية مجاناً في متصفحك"/>
-<meta property="og:type" content="website"/>
-<meta property="og:url" content="https://ab7dz.github.io/kufimaker/"/>
-<meta property="og:locale" content="ar_SA"/>
 
 <!-- ── Fonts ── -->
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -289,11 +279,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* bg-frame base */
 .bg-frame{position:absolute;box-sizing:border-box;pointer-events:auto;z-index:5;touch-action:none;}
-#coordsBar{position:fixed;bottom:35px;left:12px;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:62;}
-#zoomCtrl{position:fixed;bottom:35px;right:25%;transform:translateX(50%);display:flex;gap:4px;z-index:62;}
+#coordsBar{position:fixed;bottom:44px;left:12px;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:62;}
+#zoomCtrl{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:62;}
 .zoom-btn{width:30px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 #zoomLevel{padding:0 8px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;display:flex;align-items:center;}
-=
+
 /* RIGHT PANEL */
 #rightPanel{width:285px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:50;order:3;transition:transform .25s ease,width .25s ease;}
 #rightPanel.collapsed{transform:translateX(100%);width:0;overflow:hidden;}
@@ -510,7 +500,7 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
       <img src="icons/icon-192.png" alt="kufiMaker" style="width:34px;height:34px;border-radius:10px;flex-shrink:0;"/>
       <div>
         <div class="tb-logo-text">kufiMaker</div>
-        <div class="tb-logo-sub">محرر الخط الكوفي المربع</div>
+        <div class="tb-logo-sub">محرر الخط الكوفي</div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -815,8 +805,7 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨‍💻</div>
         <div>
           <div style="font-size:14px;font-weight:700;">ab7dz</div>
-          <div style="font-size:11px;color:var(--muted);">من تطوير حسناوي من الجزائر ومساعدة CL46</div>
-          <div style="font-size:12px;color:var(--accent);font-weight:500;">hasAyou@gmail.com</div>
+          <div style="font-size:11px;color:var(--muted);">المطوّر</div>
         </div>
       </div>
 
@@ -2588,6 +2577,20 @@ function scheduleSessionSave(){
 
 /* ══════════ WELCOME SCREEN ══════════ */
 function initWelcome(){
+  // ── Handle PWA shortcuts query params ──
+  const params = new URLSearchParams(location.search);
+  if(params.get('new')==='1'){
+    // Skip welcome, start fresh
+    enterApp();
+    return;
+  }
+  if(params.get('view')==='letters'){
+    // Skip welcome, open letters sheet
+    enterApp();
+    setTimeout(()=>openSheet('letters'), 300);
+    return;
+  }
+
   const stored=localStorage.getItem(SESSION_KEY);
   let session=null;
   try{session=stored?JSON.parse(stored):null;}catch(e){}
@@ -2795,19 +2798,9 @@ window.addEventListener('keydown',e=>{
 /* ══════════ SERVICE WORKER REGISTRATION ══════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const swPath = '/kufiMaker/sw.js';  // أو pwabuilder-sw.js لو غيرت الاسم
-    navigator.serviceWorker.register(swPath, { scope: '/kufiMaker/' })
-      .then(reg => {
-        console.log('[SW] Registered successfully! Scope:', reg.scope);
-        // اختياري: تحقق إذا كان هناك update جاهز
-        if (reg.waiting) {
-          console.log('[SW] New version waiting – يمكن تفعيله الآن');
-          // reg.waiting.postMessage({ type: 'SKIP_WAITING' }); لو حابب تفعيل فوري
-        }
-      })
-      .catch(err => {
-        console.error('[SW] Registration failed:', err);
-      });
+    navigator.serviceWorker.register('/kufiMaker/sw.js', { scope: '/kufiMaker/' })
+      .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+      .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
 </script>
