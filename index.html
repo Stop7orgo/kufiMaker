@@ -2795,9 +2795,19 @@ window.addEventListener('keydown',e=>{
 /* ══════════ SERVICE WORKER REGISTRATION ══════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/kufiMaker/sw.js', { scope: '/kufiMaker/' })
-      .then(reg => console.log('[SW] Registered, scope:', reg.scope))
-      .catch(err => console.warn('[SW] Registration failed:', err));
+    const swPath = '/kufiMaker/sw.js';  // أو pwabuilder-sw.js لو غيرت الاسم
+    navigator.serviceWorker.register(swPath, { scope: '/kufiMaker/' })
+      .then(reg => {
+        console.log('[SW] Registered successfully! Scope:', reg.scope);
+        // اختياري: تحقق إذا كان هناك update جاهز
+        if (reg.waiting) {
+          console.log('[SW] New version waiting – يمكن تفعيله الآن');
+          // reg.waiting.postMessage({ type: 'SKIP_WAITING' }); لو حابب تفعيل فوري
+        }
+      })
+      .catch(err => {
+        console.error('[SW] Registration failed:', err);
+      });
   });
 }
 </script>
