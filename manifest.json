@@ -51,6 +51,12 @@
       "icons": [{ "src": "icons/new-192.png", "sizes": "192x192" }]
     },
     {
+      "name": "عن المطور",
+      "short_name": "المطور", 
+      "url": "/kufiMaker/?view=about",
+      "icons": [{ "src": "icons/about-192.png", "sizes": "192x192" }]
+    },
+    {
       "name": "استعرض الحروف",
       "short_name": "حروف",
       "description": "عرض جميع الحروف المتاحة",
