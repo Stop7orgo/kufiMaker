@@ -6,7 +6,7 @@
 <title>kufiMaker</title>
 
 <!-- ── Favicon ── -->
-<link rel="icon" type="image/x-icon" href="screenshots/kufimaker.ico"/>
+<link rel="icon" type="image/x-icon" href="https://ab7dz.github.io/kufiMaker/screenshots/kufimaker.ico"/>
 
 <!-- ── PWA Manifest ── -->
 <link rel="manifest" href="manifest.json"/>
@@ -46,8 +46,20 @@
   --cell-bg:#0D1017;--cell-size:30px;--gap:15px;--r:12px;--rs:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;overflow:hidden;max-height:100vh;}
-body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;}
+html,body{height:100%;overflow:hidden;max-height:-webkit-fill-available;max-height:100dvh;}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;height:100dvh;}
+/* Fix landscape on mobile: grid must scroll in both axes freely */
+#main{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;min-width:0;}
+#canvasArea{flex:1;position:relative;overflow:clip;background:var(--bg);order:1;min-height:0;min-width:0;}
+#canvasViewport{
+  position:absolute;inset:0;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  cursor:crosshair;
+}
+#canvasViewport.pan-mode{cursor:grab;}
+#canvasViewport.pan-mode:active{cursor:grabbing;}
 
 /* TOP BAR — Two rows */
 #topbar{
@@ -70,8 +82,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
   width:30px;height:30px;border-radius:8px;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:900;color:#000;
+  font-size:14px;font-weight:900;color:#fff;
   flex-shrink:0;
+  box-shadow:0 2px 10px rgba(245,166,35,0.4);
 }
 .tb-logo-text{
   font-size:14px;font-weight:900;
@@ -210,10 +223,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 /* ── MAIN ── */
 #main{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;}
 
-/* ── FLOATING TOOLBAR — top right, vertical ── */
+/* ── FLOATING TOOLBAR — top right, fixed ── */
 #leftPanel{
-  position:absolute;
-  right:14px; top:14px;
+  position:fixed;
+  right:14px; top:calc(var(--topbar-h, 90px) + 10px);
   background:rgba(13,15,20,0.92);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
@@ -266,10 +279,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 .tool-sep{height:1px;width:26px;background:rgba(255,255,255,0.09);margin:3px 0;flex-shrink:0;}
 
 /* CANVAS AREA */
-#canvasArea{flex:1;position:relative;overflow:visible;background:var(--bg);order:1;}
-#canvasViewport{position:absolute;inset:0;overflow:auto;cursor:crosshair;}
-#canvasViewport.pan-mode{cursor:grab;}
-#canvasViewport.pan-mode:active{cursor:grabbing;}
+/* CANVAS AREA — defined above near body */
 /* gridCanvas: inline-grid so it sizes to content */
 #gridCanvas{display:inline-grid;gap:var(--gap);padding:20px;position:relative;min-width:max-content;transform-origin:top left;}
 .cell{width:var(--cell-size);height:var(--cell-size);background:var(--cell-bg);border-radius:3px;transition:background .07s;cursor:inherit;}
@@ -279,11 +289,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* bg-frame base */
 .bg-frame{position:absolute;box-sizing:border-box;pointer-events:auto;z-index:5;touch-action:none;}
-#coordsBar{position:absolute;bottom:10px;left:12px;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:62;}
-#zoomCtrl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:62;}
+#coordsBar{position:fixed;bottom:35px;left:12px;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:62;}
+#zoomCtrl{position:fixed;bottom:35px;right:25%;transform:translateX(50%);display:flex;gap:4px;z-index:62;}
 .zoom-btn{width:30px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 #zoomLevel{padding:0 8px;height:30px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;display:flex;align-items:center;}
-
+=
 /* RIGHT PANEL */
 #rightPanel{width:285px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:50;order:3;transition:transform .25s ease,width .25s ease;}
 #rightPanel.collapsed{transform:translateX(100%);width:0;overflow:hidden;}
@@ -497,13 +507,19 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
   <div id="topbarRow1">
     <!-- Logo left -->
     <div class="tb-logo">
-      <div class="tb-logo-mark">✦</div>
+      <img src="icons/icon-192.png" alt="kufiMaker" style="width:34px;height:34px;border-radius:10px;flex-shrink:0;"/>
       <div>
         <div class="tb-logo-text">kufiMaker</div>
-        <div class="tb-logo-sub">محرر الخط الكوفي</div>
+        <div class="tb-logo-sub">محرر الخط الكوفي المربع</div>
       </div>
     </div>
     <div class="spacer"></div>
+    <!-- About button -->
+    <button class="tb-panel-btn" id="tbAbout" data-tip="عن المطور" data-sheet="about" style="margin-left:2px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span>المطور</span>
+    </button>
+    <div style="width:1px;height:28px;background:var(--border);margin:0 4px;flex-shrink:0;"></div>
     <!-- Panel buttons right -->
     <button class="tb-panel-btn" id="tbTools" data-tip="أدوات" data-sheet="tools">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -558,6 +574,7 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
         <div class="bs-tab" data-sheet="grid">الشبكة</div>
         <div class="bs-tab" data-sheet="letters">الحروف</div>
         <div class="bs-tab" data-sheet="bg">الخلفية</div>
+        <div class="bs-tab" data-sheet="about">المطور</div>
       </div>
       <button class="bs-close" id="bsClose">✕</button>
     </div>
@@ -648,13 +665,14 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
         </div>
       </div>
       <div class="swatches" id="swatchesContainer">
-        <div class="swatch selected" style="background:#F5A623" data-color="#F5A623"></div>
+        <div class="swatch selected" style="background:#7C3AED" data-color="#7C3AED"></div>
+        <div class="swatch" style="background:#A855F7" data-color="#A855F7"></div>
         <div class="swatch" style="background:#EF4444" data-color="#EF4444"></div>
         <div class="swatch" style="background:#22C55E" data-color="#22C55E"></div>
         <div class="swatch" style="background:#3B82F6" data-color="#3B82F6"></div>
-        <div class="swatch" style="background:#8B5CF6" data-color="#8B5CF6"></div>
         <div class="swatch" style="background:#EC4899" data-color="#EC4899"></div>
         <div class="swatch" style="background:#14B8A6" data-color="#14B8A6"></div>
+        <div class="swatch" style="background:#F5A623" data-color="#F5A623"></div>
         <div class="swatch" style="background:#FFFFFF" data-color="#FFFFFF"></div>
         <div class="swatch" style="background:#111827;border:1px solid #333" data-color="#111827"></div>
       </div>
@@ -768,6 +786,57 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
           <button class="s-btn" id="bgReset" style="flex:1">مركز</button>
           <button class="s-btn danger" id="bgRemove" style="flex:1">إزالة</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div id="tab-about" class="tab-pane">
+      <!-- Profile card -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:20px 16px 12px;gap:12px;">
+        <div style="width:80px;height:80px;border-radius:22px;overflow:hidden;box-shadow:0 4px 24px rgba(245,166,35,0.45);flex-shrink:0;">
+          <img src="icons/icon-192.png" alt="kufiMaker" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.5px;">kufiMaker</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">محرر الخط الكوفي المربع</div>
+        </div>
+      </div>
+
+      <!-- App description -->
+      <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:0 4px;border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--muted);line-height:1.8;text-align:center;">
+          أداة مجانية ومفتوحة المصدر لتصميم الخط الكوفي المربع.<br/>
+          تعمل بالكامل في المتصفح — بدون خادم أو بيانات خاصة.
+        </div>
+      </div>
+
+      <!-- Developer -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin:8px 4px 0;">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨‍💻</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">ab7dz</div>
+          <div style="font-size:11px;color:var(--muted);">من تطوير حسناوي من الجزائر ومساعدة CL46</div>
+          <div style="font-size:12px;color:var(--accent);font-weight:500;">hasAyou@gmail.com</div>
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin:8px 4px 0;">
+        <a href="https://github.com/ab7dz/kufiMaker" target="_blank" rel="noopener"
+          style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);color:var(--text);text-decoration:none;font-size:13px;transition:border-color .15s;"
+          onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.745 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <div style="flex:1;">
+            <div style="font-weight:600;">المصدر على GitHub</div>
+            <div style="font-size:11px;color:var(--muted);">ab7dz/kufiMaker</div>
+          </div>
+          <svg style="opacity:.4" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+
+      <!-- Version -->
+      <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--muted);">
+        kufiMaker v7 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; 2026
       </div>
     </div>
 
@@ -923,6 +992,15 @@ let resizeTimer=null;
 window.addEventListener('resize',()=>{
   clearTimeout(resizeTimer);
   resizeTimer=setTimeout(()=>{if(!grid.flat().some(v=>v))initGrid();},300);
+});
+// Fix landscape scroll: force viewport reflow on orientation change
+window.addEventListener('orientationchange',()=>{
+  setTimeout(()=>{
+    // Force viewport to recalculate its scroll dimensions
+    vp.style.display='none';
+    vp.offsetHeight; // trigger reflow
+    vp.style.display='';
+  }, 300);
 });
 
 function cellEl(x,y){return gc.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`)||null;}
@@ -1499,7 +1577,7 @@ $id('canvasDark').addEventListener('click',()=>{$id('canvasBgColor').value='#0A0
 $id('canvasLight').addEventListener('click',()=>{$id('canvasBgColor').value='#F0EDE8';$id('canvasBgColor').dispatchEvent(new Event('input'));});
 /* ══════════ SHARED SWATCH SYSTEM ══════════ */
 const SWATCH_KEY = 'kufi_swatches';
-const DEFAULT_SWATCHES = ['#F5A623','#EF4444','#22C55E','#3B82F6','#8B5CF6','#EC4899','#14B8A6','#FFFFFF','#111827'];
+const DEFAULT_SWATCHES = ['#7C3AED','#A855F7','#EF4444','#22C55E','#3B82F6','#EC4899','#14B8A6','#F5A623','#FFFFFF','#111827'];
 
 function loadSwatchList(){
   try{ return JSON.parse(localStorage.getItem(SWATCH_KEY)) || DEFAULT_SWATCHES; }
