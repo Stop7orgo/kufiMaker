@@ -34,14 +34,35 @@
     }
   ],
   "screenshots": [
-    {
-      "src": "screenshots/screenshot1.png",
-      "sizes": "1080x2260",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "واجهة الرسم الرئيسية"
-    }
-  ],
+  {
+    "src": "screenshots/screenshot1.png",
+    "sizes": "1080x1920",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "صفحة التوجيه الرئيسية"
+  },
+  {
+    "src": "screenshots/screenshot2.png",
+    "sizes": "1080x1920",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "واجهة الرسم الرئيسية"
+  },
+  {
+    "src": "screenshots/screenshot3.png",
+    "sizes": "1080x1920",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "(نموذج لرسم تجريبي (أيوب"
+  },
+  {
+    "src": "screenshots/screenshot4.png",
+    "sizes": "1080x1920",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "تعريف التطبيق والمطور"
+  }
+],
   "shortcuts": [
     {
       "name": "ابدأ تصميم جديد",
@@ -52,7 +73,7 @@
     },
     {
       "name": "عن المطور",
-      "short_name": "المطور", 
+      "short_name": "صفحة المطور", 
       "url": "/kufiMaker/?view=about",
       "icons": [{ "src": "icons/about-192.png", "sizes": "192x192" }]
     },
