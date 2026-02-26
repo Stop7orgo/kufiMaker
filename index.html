@@ -53,12 +53,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 /* في وضع standalone/TWA فقط */
 @media all and (display-mode: standalone) {
   #topbar {
-    padding-top: 28px;
+    padding-top: 24px;
   }
 }
   @media(max-width:768px) {
-   body{padding-top:28px;!important;background:var(--surface);}
-   #leftPanel{margin-top:44px;important}
+   body{padding-top:24px;!important;background:var(--surface);}
   }
 #topbar {padding-top: env(safe-area-inset-top, 0px);}
 #main{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;min-width:0;}
@@ -238,7 +237,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 /* ── FLOATING TOOLBAR — top right, fixed ── */
 #leftPanel{
   position:fixed;
-  right:14px; top:calc(var(--topbar-h, 90px) + 10px);
+  left:14px; bottom:calc(var(--topbar-h, 90px) - 10px);
   background:rgba(13,15,20,0.92);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
@@ -249,6 +248,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
   padding:10px 7px;gap:4px;
   z-index:60;
 }
+#leftPanel button[data-tool="fill"] {
+  display: none;
+}
+
 #floatSwatches{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;}
 .float-swatch{
   width:26px;height:26px;border-radius:8px;
@@ -998,6 +1001,8 @@ function initGrid(c,r){
   renderGapElements();
   updateStatus();
   $id('statusGrid').textContent=`${cols}×${rows}`;
+  // Scroll to right edge (RTL start)
+  requestAnimationFrame(()=>{ vp.scrollLeft = vp.scrollWidth; });
 }
 
 let resizeTimer=null;
