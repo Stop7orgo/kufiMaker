@@ -56,6 +56,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
     padding-top: 28px;
   }
 }
+  @media(max-width:768px) {
+   body{padding-top:28px;!important;background:var(--surface);}
+   #leftPanel{margin-top:44px;}
+  }
 #topbar {padding-top: env(safe-area-inset-top, 0px);}
 #main{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;min-width:0;}
 #canvasArea{flex:1;position:relative;overflow:clip;background:var(--bg);order:1;min-height:0;min-width:0;}
