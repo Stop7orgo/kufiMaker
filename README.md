@@ -62,8 +62,8 @@ kufiMaker أداة ويب مجانية لتصميم الخط الكوفي الم
 
 | | |
 |---|---|
-| ![](screenshots/screenshot3.png) | ![](screenshots/screenshot2.png) |
-
+| ![واجهة الرسم](screenshots/screenshot1.png) | ![أدوات التعديل](screenshots/screenshot2.png) |
+| ![مكتبة الحروف](screenshots/screenshot3.png) | ![خيارات التصدير](screenshots/screenshot4.png) |
 
 ---
 
