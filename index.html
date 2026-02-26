@@ -50,6 +50,12 @@
 html,body{height:100%;overflow:hidden;max-height:-webkit-fill-available;max-height:100dvh;}
 body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;height:100dvh;}
 /* Fix landscape on mobile: grid must scroll in both axes freely */
+/* في وضع standalone/TWA فقط */
+@media all and (display-mode: standalone) {
+  #topbar {
+    padding-top: 28px;
+  }
+}
 #topbar {padding-top: env(safe-area-inset-top, 0px);}
 #main{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;min-width:0;}
 #canvasArea{flex:1;position:relative;overflow:clip;background:var(--bg);order:1;min-height:0;min-width:0;}
