@@ -148,7 +148,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
   background:var(--surface);
   border-radius:22px 22px 0 0;
   border-top:1px solid var(--border);
-  height:50vh; min-height:300px;
+  height:72vh; min-height:300px;
   display:flex;flex-direction:column;
   transform:translateY(102%);
   transition:transform .32s cubic-bezier(.4,0,.2,1);
@@ -166,6 +166,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 .bs-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 16px 32px;display:flex;flex-direction:column;gap:10px;}
 .bs-content::-webkit-scrollbar{width:3px;}
 .bs-content::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px;}
+.bs-tabs{ display:none; }
 
 /* Desktop: centered modal */
 @media(min-width:768px){
