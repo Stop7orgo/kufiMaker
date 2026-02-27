@@ -108,11 +108,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <span>خلفية</span>
     </button>
-    <!-- Install PWA button — hidden until browser fires beforeinstallprompt -->
-    <button class="tb-panel-btn" id="btnInstall" data-tip="تثبيت التطبيق" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span>تثبيت</span>
-    </button>
   </div>
   <!-- Row 2: Action buttons -->
   <div id="topbarRow2">
@@ -386,23 +381,32 @@
           أداة مجانية ومفتوحة المصدر لتصميم الخط الكوفي المربع.<br/>
           تعمل بالكامل في المتصفح — بدون خادم أو بيانات خاصة.
         </div>
-
-
       </div>
-
+      
       <!-- Developer -->
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin:8px 4px 0;">
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨‍💻</div>
         <div>
           <div style="font-size:14px;font-weight:700;">ab7dz</div>
           <div style="font-size:12px;color:var(--accent2);font-weight:400;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb5bcaebca4b2a89dbab0bcb4b1f3beb2b0">hasayou@gmail.com</a></div>
-          <div style="font-size:11px;color:var(--muted);">☝️المطور حسناوي / CL46</div>
+          <div style="font-size:11px;color:var(--muted);">️المطور حسناوي / CL46</div>
         </div>
-        <div style="font-size:11px;color:var(--muted);"> إعادة تهيئة التطبيق  
-            <button style="text-align:left;" class="tb-btn" id="btnReset" data-tip="إعادة تهيئة شاملة">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            </button>
-         </div>
+  <div style="font-size:11px;color:var(--muted);">
+   إعادة تهيئة التطبيق
+            
+   <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
+      <button class="tb-panel-btn" id="btnReset" data-tip="إعادة تهيئة شاملة">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+         <span>تهيئة</span>
+      </button>
+
+      <button class="tb-panel-btn" id="btnInstall" data-tip="تثبيت التطبيق" 
+         style="display:none;">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+         <span>تثبيت</span>
+      </button>
+   </div>
+</div>
       </div>
 
       <!-- Links -->
