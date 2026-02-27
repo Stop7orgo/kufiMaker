@@ -832,15 +832,9 @@ function applyTool(x,y,fresh=false){
   if(x<0||y<0||x>=cols||y>=rows) return;
   const el=cellEl(x,y); if(!el) return;
   if(tool==='draw'){
-    if(fresh){
-      const nv=grid[y][x]===1?0:1; grid[y][x]=nv;
-      if(nv){cellColors[`${x},${y}`]=drawColor;el.classList.add('filled');el.style.background=drawColor;}
-      else  {delete cellColors[`${x},${y}`];el.classList.remove('filled');el.style.background='';}
-    } else {
-      if(grid[y][x]===1) return;
-      grid[y][x]=1; cellColors[`${x},${y}`]=drawColor;
-      el.classList.add('filled'); el.style.background=drawColor;
-    }
+    if(grid[y][x]===1) return;
+       grid[y][x]=1; cellColors[`${x},${y}`]=drawColor;
+    el.classList.add('filled'); el.style.background=drawColor;
     el.style.borderRadius=grid[y][x]?computeCellRadius(x,y):`${cellRad}px`;
     refreshRadiusAround(x,y);
     renderGapElements();
