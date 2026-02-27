@@ -108,6 +108,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <span>خلفية</span>
     </button>
+    <!-- Install PWA button — hidden until browser fires beforeinstallprompt -->
+    <button class="tb-panel-btn" id="btnInstall" data-tip="تثبيت التطبيق" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>تثبيت</span>
+    </button>
   </div>
   <!-- Row 2: Action buttons -->
   <div id="topbarRow2">
@@ -362,6 +367,7 @@
 
     <!-- ABOUT -->
     <div id="tab-about" class="tab-pane">
+      
       <!-- Profile card -->
       <div style="display:flex;flex-direction:column;align-items:center;padding:20px 16px 12px;gap:12px;">
         <div style="width:80px;height:80px;border-radius:22px;overflow:hidden;box-shadow:0 4px 24px rgba(245,166,35,0.45);flex-shrink:0;">
@@ -375,10 +381,13 @@
 
       <!-- App description -->
       <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:0 4px;border:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--muted);line-height:1.8;text-align:center;">
+        
+        <div style="font-size:12px;color:var(--muted);line-height:1.8;text-align:right;">
           أداة مجانية ومفتوحة المصدر لتصميم الخط الكوفي المربع.<br/>
           تعمل بالكامل في المتصفح — بدون خادم أو بيانات خاصة.
         </div>
+
+
       </div>
 
       <!-- Developer -->
@@ -386,9 +395,14 @@
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨‍💻</div>
         <div>
           <div style="font-size:14px;font-weight:700;">ab7dz</div>
-          <div style="font-size:12px;color:var(--accent2);font-weight:400;">hasayou@gmail.com</div>
-          <div style="font-size:11px;color:var(--muted);">☝️💯 المطور حسناوي بمساعدة CL46</div>
+          <div style="font-size:12px;color:var(--accent2);font-weight:400;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb5bcaebca4b2a89dbab0bcb4b1f3beb2b0">hasayou@gmail.com</a></div>
+          <div style="font-size:11px;color:var(--muted);">☝️المطور حسناوي / CL46</div>
         </div>
+        <div style="font-size:11px;color:var(--muted);"> إعادة تهيئة التطبيق  
+            <button style="text-align:left;" class="tb-btn" id="btnReset" data-tip="إعادة تهيئة شاملة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+         </div>
       </div>
 
       <!-- Links -->
@@ -407,7 +421,7 @@
 
       <!-- Version -->
       <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--muted);">
-        kufiMaker v7 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; 2026
+        kufiMaker v8 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; 2026
       </div>
     </div>
 
@@ -475,9 +489,10 @@
   </div>
 </div>
 
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════
-   kufiMaker — v7
+   kufiMaker — v8
    ✓ Blend mode FIXED (bgLayer is sibling of gc, not child)
    ✓ Gap H/V/Dot cells fully interactive like cells
    ✓ Smart corner radius (connected shapes look joined)
@@ -813,11 +828,15 @@ function applyTool(x,y,fresh=false){
   if(x<0||y<0||x>=cols||y>=rows) return;
   const el=cellEl(x,y); if(!el) return;
   if(tool==='draw'){
-    
-    if(grid[y][x]===1) return;
-    grid[y][x]=1; cellColors[`${x},${y}`]=drawColor;
-    el.classList.add('filled'); el.style.background=drawColor;
-    
+    if(fresh){
+      const nv=grid[y][x]===1?0:1; grid[y][x]=nv;
+      if(nv){cellColors[`${x},${y}`]=drawColor;el.classList.add('filled');el.style.background=drawColor;}
+      else  {delete cellColors[`${x},${y}`];el.classList.remove('filled');el.style.background='';}
+    } else {
+      if(grid[y][x]===1) return;
+      grid[y][x]=1; cellColors[`${x},${y}`]=drawColor;
+      el.classList.add('filled'); el.style.background=drawColor;
+    }
     el.style.borderRadius=grid[y][x]?computeCellRadius(x,y):`${cellRad}px`;
     refreshRadiusAround(x,y);
     renderGapElements();
@@ -891,7 +910,7 @@ vp.addEventListener('pointerdown',e=>{
   const gt=e.target.dataset.gtype;
   if(gt){
     saveState();
-    applyGapTool(gt,+e.target.dataset.gx,+e.target.dataset.gy, true); // toggle on first click
+    applyGapTool(gt,+e.target.dataset.gx,+e.target.dataset.gy, false);
     gapDrawing=true;
     vp.setPointerCapture(e.pointerId); return;
   }
@@ -2248,6 +2267,23 @@ $id('btnClear').addEventListener('click',()=>showConfirm('مسح كل المحت
   renderGrid();
 }));
 
+$id('btnReset').addEventListener('click',()=>showConfirm('إعادة تهيئة شاملة؟ سيتم مسح كل البيانات والإعدادات.',async()=>{
+  try{ localStorage.clear(); }catch(e){}
+  try{
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  location.reload(true);
+}));
+
 /* ══════════ EXPORT ══════════ */
 function exportCanvas(withBg){
   const canvas=document.createElement('canvas');
@@ -2379,6 +2415,27 @@ window.addEventListener('keydown',e=>{
   window.renderGrid=function(){origRenderGrid.apply(this,arguments);scheduleSessionSave?.();};
   initWelcome();
 })();
+
+/* ══════════ PWA INSTALL ══════════ */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  const btn=$id('btnInstall');
+  if(btn) btn.style.display='';
+});
+$id('btnInstall')?.addEventListener('click',async()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted') $id('btnInstall').style.display='none';
+  deferredPrompt=null;
+});
+window.addEventListener('appinstalled',()=>{
+  const btn=$id('btnInstall');
+  if(btn) btn.style.display='none';
+  deferredPrompt=null;
+});
 
 /* ══════════ SERVICE WORKER REGISTRATION ══════════ */
 if ('serviceWorker' in navigator) {
