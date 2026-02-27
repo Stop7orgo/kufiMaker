@@ -13,6 +13,7 @@ const BASE  = '/kufiMaker';
 const PRECACHE = [
   BASE + '/',
   BASE + '/index.html',
+  BASE + '/style.css',
   BASE + '/letters.json',
   BASE + '/manifest.json',
   BASE + '/icons/icon-192.png',
@@ -77,6 +78,7 @@ self.addEventListener('fetch', event => {
   const isShell =
     url.pathname === BASE + '/' ||
     url.pathname === BASE + '/index.html' ||
+    url.pathname === BASE + '/style.css' ||
     url.pathname === BASE + '/letters.json' ||
     url.pathname === BASE + '/manifest.json' ||
     url.pathname.startsWith(BASE + '/icons/');
