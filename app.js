@@ -79,8 +79,7 @@ function initGrid(c,r){
   renderGapElements();
   updateStatus();
   $id('statusGrid').textContent=`${cols}×${rows}`;
-  // Scroll to right edge (RTL start)
-  requestAnimationFrame(()=>{ vp.scrollLeft = vp.scrollWidth; });
+  requestAnimationFrame(()=>{ vp.scrollLeft = 0; vp.scrollTop = 0; });
 }
 
 let resizeTimer=null;
@@ -543,6 +542,33 @@ function buildBgFrame(){
     pointer-events:none;
   `;
   frame.appendChild(imgDiv);
+
+  // زر إعدادات ⚙️ فوق الصورة على الشبكة
+  const settingsBtn = document.createElement('button');
+  settingsBtn.id = '__bgSettingsFab';
+  settingsBtn.innerHTML = '⚙️';
+  settingsBtn.style.cssText=`
+    position:absolute; top:4px; right:4px;
+    width:28px; height:28px; border-radius:50%;
+    background:rgba(0,0,0,0.65); border:1px solid rgba(255,255,255,0.2);
+    color:#fff; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    z-index:20; pointer-events:auto; touch-action:manipulation;
+    line-height:1;
+  `;
+  settingsBtn.addEventListener('pointerdown', e=>e.stopPropagation());
+  settingsBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    // افتح أدوات وأظهر الإعدادات
+    openSheet('tools');
+    setTimeout(()=>{
+      const ctrl=$id('bgControls');
+      if(ctrl) ctrl.style.display='flex';
+      ctrl?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }, 150);
+  });
+  frame.appendChild(settingsBtn);
+
   const rl=document.createElement('div'); rl.className='rot-line'; frame.appendChild(rl);
   ['tl','tr','bl','br','tm','bm','lm','rm','rot'].forEach(cls=>{
     const h=document.createElement('div'); h.className=`bg-handle ${cls}`; h.dataset.h=cls; frame.appendChild(h);
@@ -611,23 +637,56 @@ function syncBgControls(){
 }
 
 /* BG controls */
+/* ── setBgImage — مركزي لكل مصادر الصورة ── */
+function setBgImage(dataUrl){
+  bgImg = dataUrl;
+  bgProps.rotate = 0;
+  bgProps.opacity = 0.5;
+  bgProps.blend = 'normal';
+
+  const img = new Image();
+  img.onload = () => {
+    const cellTotal = cellSz + gapSz;
+    const targetW   = 8 * cellTotal * zoom;
+    const ratio     = img.naturalHeight / Math.max(1, img.naturalWidth);
+    bgProps.w = targetW;
+    bgProps.h = Math.round(targetW * ratio);
+    bgProps.x = 2 * cellTotal;
+    bgProps.y = 2 * cellTotal;
+    bgDragEnable = true;
+    if($id('bgDraggable')) $id('bgDraggable').checked = true;
+    // أظهر الإعدادات فوراً
+    const bgCtrl = $id('bgControls');
+    if(bgCtrl) bgCtrl.style.display = 'flex';
+    applyBg();
+    syncBgControls();
+    updateBgPreview(dataUrl);
+  };
+  img.src = dataUrl;
+}
+
+/* ── معاينة الصورة ── */
+function updateBgPreview(dataUrl){
+  const uploadZone  = $id('bgUploadZone');
+  const previewArea = $id('bgPreviewArea');
+  const thumb       = $id('bgPreviewThumb');
+  if(dataUrl){
+    if(uploadZone)  uploadZone.style.display  = 'none';
+    if(previewArea) previewArea.style.display = 'block';
+    if(thumb)       thumb.src = dataUrl;
+  } else {
+    if(uploadZone)  uploadZone.style.display  = '';
+    if(previewArea) previewArea.style.display = 'none';
+    if(thumb)       thumb.src = '';
+    const bgCtrl = $id('bgControls');
+    if(bgCtrl) bgCtrl.style.display = 'none';
+  }
+}
+
 $id('bgFileInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   const rd=new FileReader();
-  rd.onload=ev=>{
-    bgImg=ev.target.result; $id('bgControls').style.display='flex';
-    bgProps.w=0; // reset so applyBg auto-sizes
-    bgProps.opacity=0.5; bgProps.rotate=0; bgProps.blend='normal';
-    bgDragEnable=true; $id('bgDraggable').checked=true;
-    applyBg(); syncBgControls();
-    // تحديث المعاينة
-    const thumb=$id('bgPreviewThumb');
-    const icon=$id('bgUploadIcon');
-    const text=$id('bgUploadText');
-    if(thumb){thumb.src=ev.target.result;thumb.style.display='block';}
-    if(icon) icon.style.display='none';
-    if(text) text.textContent='انقر لتغيير الصورة';
-  };
+  rd.onload=ev=>{ setBgImage(ev.target.result); };
   rd.readAsDataURL(f);
 });
 ['bgOpacity','bgScale','bgX','bgY'].forEach(id=>{
@@ -653,7 +712,11 @@ $id('bgDraggable').addEventListener('change',e=>{
 });
 $id('bgToggle').addEventListener('click',()=>{bgVisible=!bgVisible;$id('bgToggle').textContent=bgVisible?'إخفاء':'إظهار';applyBg();});
 $id('bgReset').addEventListener('click',()=>{bgProps.w=0;applyBg();syncBgControls();});
-$id('bgRemove').addEventListener('click',()=>{bgImg=null;bgL.innerHTML='';bgL.style.cssText='';$id('bgControls').style.display='none';$id('bgFileInput').value='';});
+$id('bgRemove').addEventListener('click',()=>{
+  bgImg=null;bgL.innerHTML='';bgL.style.cssText='';
+  $id('bgFileInput').value='';
+  updateBgPreview(null);
+});;
 
 // Re-position bgLayer when vp scrolls (since bgLayer is vp-relative)
 vp.addEventListener('scroll',()=>{if(bgImg)applyBg();});
@@ -1888,7 +1951,7 @@ $id('loadFileInput').addEventListener('change',e=>{
       if(d.gapDColors)gapDColors=d.gapDColors;
       if(d.drawColor){drawColor=d.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor; if(typeof buildSwatches==='function')buildSwatches();}
       if(d.bgProps)Object.assign(bgProps,d.bgProps);
-      if(d.bgImg){bgImg=d.bgImg;$id('bgControls').style.display='flex';applyBg();}
+      if(d.bgImg){bgImg=d.bgImg;applyBg();updateBgPreview(d.bgImg);const c=$id('bgControls');if(c)c.style.display='flex';}
       renderGrid();
     }catch(err){alert('خطأ في تحميل الملف');}
   };
@@ -1939,27 +2002,13 @@ if(location.search.includes('share-target')){
       if(!res) return;
       const blob  = await res.blob();
       const url   = URL.createObjectURL(blob);
-
-      // حساب حجم الصورة: عرض 8 خلايا
-      const imgEl = new Image();
-      imgEl.onload = ()=>{
-        const targetW = 8 * (cellSz + gapSz);          // عرض 8 خلايا
-        const ratio   = imgEl.naturalHeight / imgEl.naturalWidth;
-        const targetH = Math.round(targetW * ratio);    // الطول بنسبة الصورة
-        bgProps.w = targetW;
-        bgProps.h = targetH;
-        bgProps.x = 20;   // x=20
-        bgProps.y = 20;   // y=20
-        bgProps.opacity = 0.5;
-        bgImg = url;
-        bgVisible = true;
-        const bgCtrl = document.getElementById('bgControls');
-        if(bgCtrl) bgCtrl.style.display = 'flex';
-        applyBg();
-        setTimeout(()=> openSheet('bg'), 400);
-      };
-      imgEl.src = url;
       await cache.delete('shared-image');
+      setTimeout(()=>{
+        setBgImage(url);
+        const drag = $id('bgDraggable');
+        if(drag) drag.checked = true;
+        openSheet('bg');
+      }, 600);
     }catch(e){ console.warn('[ShareTarget]', e); }
   });
 }
