@@ -620,6 +620,13 @@ $id('bgFileInput').addEventListener('change',e=>{
     bgProps.opacity=0.5; bgProps.rotate=0; bgProps.blend='normal';
     bgDragEnable=true; $id('bgDraggable').checked=true;
     applyBg(); syncBgControls();
+    // تحديث المعاينة
+    const thumb=$id('bgPreviewThumb');
+    const icon=$id('bgUploadIcon');
+    const text=$id('bgUploadText');
+    if(thumb){thumb.src=ev.target.result;thumb.style.display='block';}
+    if(icon) icon.style.display='none';
+    if(text) text.textContent='انقر لتغيير الصورة';
   };
   rd.readAsDataURL(f);
 });
@@ -1932,14 +1939,27 @@ if(location.search.includes('share-target')){
       if(!res) return;
       const blob  = await res.blob();
       const url   = URL.createObjectURL(blob);
-      bgImg = url;
-      bgVisible = true;
-      const bgCtrl = document.getElementById('bgControls');
-      if(bgCtrl) bgCtrl.style.display = 'flex';
-      applyBg();
+
+      // حساب حجم الصورة: عرض 8 خلايا
+      const imgEl = new Image();
+      imgEl.onload = ()=>{
+        const targetW = 8 * (cellSz + gapSz);          // عرض 8 خلايا
+        const ratio   = imgEl.naturalHeight / imgEl.naturalWidth;
+        const targetH = Math.round(targetW * ratio);    // الطول بنسبة الصورة
+        bgProps.w = targetW;
+        bgProps.h = targetH;
+        bgProps.x = 20;   // x=20
+        bgProps.y = 20;   // y=20
+        bgProps.opacity = 0.5;
+        bgImg = url;
+        bgVisible = true;
+        const bgCtrl = document.getElementById('bgControls');
+        if(bgCtrl) bgCtrl.style.display = 'flex';
+        applyBg();
+        setTimeout(()=> openSheet('bg'), 400);
+      };
+      imgEl.src = url;
       await cache.delete('shared-image');
-      // فتح تبويب الخلفية تلقائياً
-      setTimeout(()=> openSheet('bg'), 400);
     }catch(e){ console.warn('[ShareTarget]', e); }
   });
 }
