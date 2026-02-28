@@ -7,7 +7,7 @@
    · Query params (?new=1, ?view=letters) → always serve index.html
 ═══════════════════════════════════════════════════ */
 
-const CACHE = 'kufimaker-v3';
+const CACHE = 'kufimaker-v4';
 const BASE  = '/kufiMaker';
 
 const PRECACHE = [
@@ -22,7 +22,6 @@ const PRECACHE = [
   BASE + '/icons/icon-512-maskable.png',
   BASE + '/icons/new-192.png',
   BASE + '/icons/letters-192.png',
-  BASE + '/icons/about-192.png',
 ];
 
 /* ── Install ─────────────────────────────────────── */
@@ -55,7 +54,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (!url.protocol.startsWith('http')) return;
 
-  /* Share Target — POST من مشاركة صورة */
+  /* Share Target — POST صورة أو JSON */
   if (
     req.method === 'POST' &&
     url.pathname === BASE + '/' &&
@@ -64,10 +63,15 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const formData = await req.formData();
-        const file     = formData.get('image');
-        if (file) {
-          const cache = await caches.open('kufimaker-share');
-          await cache.put('shared-image', new Response(file));
+        const cache    = await caches.open('kufimaker-share');
+        const imgFile  = formData.get('image');
+        if(imgFile && imgFile.type && imgFile.type.startsWith('image/')){
+          await cache.put('shared-image', new Response(imgFile));
+        }
+        const jsonFile = formData.get('json');
+        if(jsonFile){
+          const text = await jsonFile.text();
+          await cache.put('shared-json', new Response(text, {headers:{'Content-Type':'application/json'}}));
         }
       } catch(e) { console.warn('[SW share]', e); }
       return Response.redirect(BASE + '/?share-target', 303);
