@@ -104,6 +104,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M6 20V4l6 8 6-8v16"/></svg>
       <span>حروف</span>
     </button>
+    <button class="tb-panel-btn" id="tbBg" data-tip="الخلفية" data-sheet="bg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <span>خلفية</span>
+    </button>
   </div>
   <!-- Row 2: Action buttons -->
   <div id="topbarRow2">
@@ -135,7 +139,14 @@
 <div id="sheetOverlay">
   <div id="bottomSheet" dir="rtl">
     <div class="bs-handle"></div>
-    <div style="display:flex;align-items:center;padding:8px 16px 0;justify-content:flex-end;">
+    <div style="display:flex;align-items:center;padding:8px 16px 0;">
+      <div class="bs-tabs" id="bsTabs" style="flex:1;padding:0;">
+        <div class="bs-tab active" data-sheet="tools">أدوات</div>
+        <div class="bs-tab" data-sheet="grid">الشبكة</div>
+        <div class="bs-tab" data-sheet="letters">الحروف</div>
+        <div class="bs-tab" data-sheet="bg">الخلفية</div>
+        <div class="bs-tab" data-sheet="about">المطور</div>
+      </div>
       <button class="bs-close" id="bsClose">✕</button>
     </div>
     <div class="bs-content" id="bsContent"></div>
@@ -241,44 +252,11 @@
         <button class="s-btn accent full" id="exportPNG">تصدير PNG نظيف</button>
         <button class="s-btn full" id="exportWithBg">تصدير مع خلفية</button>
       </div>
-
-      <!-- صورة مرجعية -->
-      <div class="sec" style="margin-top:12px;">صورة مرجعية</div>
-      <label class="upload-zone" for="bgFileInput" id="bgUploadZone">
-        <div style="font-size:22px;margin-bottom:4px;">📷</div>
-        <div style="font-size:12px;font-weight:600;">انقر لرفع صورة مرجعية</div>
-        <div style="font-size:10px;margin-top:2px;color:var(--muted);">PNG · JPG · WebP · SVG</div>
-        <input type="file" id="bgFileInput" accept="image/*"/>
-      </label>
-      <!-- معاينة بعد رفع -->
-      <div id="bgPreviewArea" style="display:none;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:var(--surface2);">
-        <img id="bgPreviewThumb" src="" alt="" style="width:100%;max-height:130px;object-fit:contain;display:block;padding:8px;"/>
-        <div style="display:flex;gap:5px;padding:6px 8px;border-top:1px solid var(--border);background:var(--surface3);">
-          <button class="s-btn" id="bgToggle" style="flex:1;font-size:11px;">إخفاء</button>
-          <button class="s-btn" id="bgReset" style="flex:1;font-size:11px;">مركز</button>
-          <button class="s-btn danger" id="bgRemove" style="flex:1;font-size:11px;">إزالة</button>
-        </div>
-      </div>
-      <!-- إعدادات — تظهر فور إضافة صورة -->
-      <div id="bgControls" style="display:none;flex-direction:column;gap:6px;margin-top:6px;padding:10px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);">
-        <div class="sec" style="margin:0 0 2px;">إعدادات الصورة</div>
-        <div class="sec">الشفافية</div>
-        <div class="ctrl-row"><input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35"/><span class="ctrl-val" id="bgOpacityVal">35%</span></div>
-        <div class="sec">الحجم</div>
-        <div class="ctrl-row"><input type="range" id="bgScale" min="10" max="300" value="100"/><span class="ctrl-val" id="bgScaleVal">100%</span></div>
-        <div class="sec">X</div>
-        <div class="ctrl-row"><input type="range" id="bgX" min="-600" max="600" value="0"/><span class="ctrl-val" id="bgXVal">0</span></div>
-        <div class="sec">Y</div>
-        <div class="ctrl-row"><input type="range" id="bgY" min="-600" max="600" value="0"/><span class="ctrl-val" id="bgYVal">0</span></div>
-        <div class="sec">وضع المزج</div>
-        <select id="bgBlendMode" style="width:100%;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--rs);font-family:'Tajawal',sans-serif;font-size:12px;outline:none;">
-          <option value="normal">عادي</option>
-          <option value="multiply">ضرب</option>
-          <option value="screen">شاشة</option>
-          <option value="overlay">تراكب</option>
-          <option value="lighten">إضاءة</option>
-        </select>
-        <div class="ctrl-row"><input type="checkbox" id="bgDraggable" style="width:15px;height:15px;"/><span class="ctrl-label">تمكين سحب الصورة</span></div>
+      <div class="sec" style="margin-top:8px;">خلفية اللوحة</div>
+      <div class="btn-group">
+        <button class="s-btn" id="canvasDark">داكنة</button>
+        <button class="s-btn" id="canvasLight">فاتحة</button>
+        <div class="color-btn" style="width:30px;height:30px;"><input type="color" id="canvasBgColor" value="#0A0C10"/></div>
       </div>
     </div>
 
@@ -316,12 +294,6 @@
       <div class="ctrl-row"><input type="checkbox" id="showRulers" style="width:15px;height:15px;"/><span class="ctrl-label">إظهار المساطر الزرقاء</span></div>
       <div class="sec" style="margin-top:8px;">خطوط بين الخلايا</div>
       <div class="ctrl-row"><input type="checkbox" id="showLineMode" style="width:15px;height:15px;"/><span class="ctrl-label">تفعيل رسم الخطوط البينية</span></div>
-      <div class="sec" style="margin-top:8px;">خلفية اللوحة</div>
-      <div class="btn-group">
-        <button class="s-btn" id="canvasDark">داكنة</button>
-        <button class="s-btn" id="canvasLight">فاتحة</button>
-        <div class="color-btn" style="width:30px;height:30px;"><input type="color" id="canvasBgColor" value="#0A0C10"/></div>
-      </div>
     </div>
 
     <!-- LETTERS -->
@@ -341,6 +313,50 @@
         <span class="ctrl-label">Y</span><input type="number" id="placeY" value="2" min="0" max="90" style="flex:1"/>
       </div>
       <div class="ctrl-row"><input type="checkbox" id="autoAdvance" checked style="width:15px;height:15px;"/><span class="ctrl-label">تقدم تلقائي يميناً</span></div>
+    </div>
+
+    <!-- BACKGROUND -->
+    <div id="tab-bg" class="tab-pane">
+
+      <!-- upload zone -->
+      <label class="upload-zone" for="bgFileInput" id="bgUploadZone">
+        <div style="font-size:26px;margin-bottom:5px;">📷</div>
+        <div style="font-size:13px;font-weight:600;">انقر لرفع صورة مرجعية</div>
+        <div style="font-size:10px;margin-top:3px;color:var(--muted);">PNG · JPG · WebP · SVG</div>
+        <input type="file" id="bgFileInput" accept="image/*"/>
+      </label>
+
+      <!-- معاينة بعد الرفع -->
+      <div id="bgPreviewArea" style="display:none;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:var(--surface2);margin-bottom:6px;">
+        <img id="bgPreviewThumb" src="" alt="" style="width:100%;max-height:140px;object-fit:contain;display:block;padding:8px;"/>
+        <div style="display:flex;gap:5px;padding:6px 8px;border-top:1px solid var(--border);background:var(--surface3);">
+          <button class="s-btn" id="bgToggle" style="flex:1;font-size:11px;">إخفاء</button>
+          <button class="s-btn" id="bgReset" style="flex:1;font-size:11px;">مركز</button>
+          <button class="s-btn danger" id="bgRemove" style="flex:1;font-size:11px;">إزالة</button>
+        </div>
+      </div>
+
+      <!-- إعدادات — تظهر تلقائياً عند وجود صورة -->
+      <div id="bgControls" style="display:none;flex-direction:column;gap:6px;">
+        <div class="sec">الشفافية</div>
+        <div class="ctrl-row"><input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35"/><span class="ctrl-val" id="bgOpacityVal">35%</span></div>
+        <div class="sec">الحجم</div>
+        <div class="ctrl-row"><input type="range" id="bgScale" min="10" max="300" value="100"/><span class="ctrl-val" id="bgScaleVal">100%</span></div>
+        <div class="sec">الموضع الأفقي (X)</div>
+        <div class="ctrl-row"><input type="range" id="bgX" min="-600" max="600" value="0"/><span class="ctrl-val" id="bgXVal">0</span></div>
+        <div class="sec">الموضع العمودي (Y)</div>
+        <div class="ctrl-row"><input type="range" id="bgY" min="-600" max="600" value="0"/><span class="ctrl-val" id="bgYVal">0</span></div>
+        <div class="sec">وضع المزج</div>
+        <select id="bgBlendMode" style="width:100%;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--rs);font-family:'Tajawal',sans-serif;font-size:12px;outline:none;">
+          <option value="normal">عادي</option>
+          <option value="multiply">ضرب</option>
+          <option value="screen">شاشة</option>
+          <option value="overlay">تراكب</option>
+          <option value="lighten">إضاءة</option>
+        </select>
+        <div class="ctrl-row"><input type="checkbox" id="bgDraggable" style="width:15px;height:15px;"/><span class="ctrl-label">تمكين سحب الصورة</span></div>
+      </div>
+
     </div>
 
     <!-- ABOUT -->
@@ -371,7 +387,7 @@
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨‍💻</div>
         <div>
           <div style="font-size:14px;font-weight:700;">ab7dz</div>
-          <div><a style="font-size:12px;color:var(--accent2);font-weight:400;" href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb5bcaebca4b2a89dbab0bcb4b1f3beb2b0"><span class="__cf_email__" data-cfemail="432b2230223a2c3603242e222a2f6d202c2e">[email&#160;protected]</span></a></div>
+          <div><a style="font-size:12px;color:var(--accent2);font-weight:400;" href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb5bcaebca4b2a89dbab0bcb4b1f3beb2b0"><span class="__cf_email__" data-cfemail="b5ddd4c6d4ccdac0f5d2d8d4dcd99bd6dad8">[email&#160;protected]</span></a></div>
           <div style="font-size:11px;color:var(--muted);">️المطور حسناوي / CL46</div>
         </div>
   <div style="font-size:11px;color:var(--muted);">
