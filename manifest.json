@@ -13,6 +13,8 @@
   "lang": "ar",
   "dir": "rtl",
   "categories": ["art", "productivity", "education", "design"],
+  "launch_handler": { "client_mode": "focus-existing" },
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",
