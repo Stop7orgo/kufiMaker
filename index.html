@@ -318,12 +318,13 @@
     <!-- BACKGROUND -->
     <div id="tab-bg" class="tab-pane">
       <div class="sec">صورة مرجعية للنسخ</div>
-      <label class="upload-zone" for="bgFileInput">
-        <div style="font-size:22px;margin-bottom:5px;">📷</div>
-        <div>انقر لرفع صورة مرجعية</div>
-        <div style="font-size:10px;margin-top:3px;">PNG, JPG, SVG, WebP</div>
-        <input type="file" id="bgFileInput" accept="image/*"/>
-      </label>
+<label class="upload-zone" for="bgFileInput" id="bgUploadZone">
+  <img id="bgPreviewThumb" src="" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:8px;margin-bottom:6px;"/>
+  <div id="bgUploadIcon" style="font-size:22px;margin-bottom:5px;">📷</div>
+  <div id="bgUploadText">انقر لرفع صورة مرجعية</div>
+  <div style="font-size:10px;margin-top:3px;">PNG, JPG, SVG, WebP</div>
+  <input type="file" id="bgFileInput" accept="image/*"/>
+</label>
       <div id="bgControls" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:8px;">
         <div>
           <div class="sec">الشفافية</div>
