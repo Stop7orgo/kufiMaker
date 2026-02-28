@@ -1923,6 +1923,27 @@ window.addEventListener('keydown',e=>{
   initWelcome();
 })();
 
+/* ══════════ SHARE TARGET ══════════ */
+if(location.search.includes('share-target')){
+  window.addEventListener('load', async ()=>{
+    try{
+      const cache = await caches.open('kufimaker-share');
+      const res   = await cache.match('shared-image');
+      if(!res) return;
+      const blob  = await res.blob();
+      const url   = URL.createObjectURL(blob);
+      bgImg = url;
+      bgVisible = true;
+      const bgCtrl = document.getElementById('bgControls');
+      if(bgCtrl) bgCtrl.style.display = 'flex';
+      applyBg();
+      await cache.delete('shared-image');
+      // فتح تبويب الخلفية تلقائياً
+      setTimeout(()=> openSheet('bg'), 400);
+    }catch(e){ console.warn('[ShareTarget]', e); }
+  });
+}
+
 /* ══════════ PWA INSTALL ══════════ */
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{
