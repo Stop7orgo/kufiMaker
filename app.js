@@ -79,7 +79,8 @@ function initGrid(c,r){
   renderGapElements();
   updateStatus();
   $id('statusGrid').textContent=`${cols}×${rows}`;
-  requestAnimationFrame(()=>{ vp.scrollLeft = 0; vp.scrollTop = 0; });
+  // Scroll to right edge (RTL start)
+  requestAnimationFrame(()=>{ vp.scrollLeft = vp.scrollWidth; });
 }
 
 let resizeTimer=null;
@@ -542,33 +543,6 @@ function buildBgFrame(){
     pointer-events:none;
   `;
   frame.appendChild(imgDiv);
-
-  // زر إعدادات ⚙️ فوق الصورة على الشبكة
-  const settingsBtn = document.createElement('button');
-  settingsBtn.id = '__bgSettingsFab';
-  settingsBtn.innerHTML = '⚙️';
-  settingsBtn.style.cssText=`
-    position:absolute; top:4px; right:4px;
-    width:28px; height:28px; border-radius:50%;
-    background:rgba(0,0,0,0.65); border:1px solid rgba(255,255,255,0.2);
-    color:#fff; font-size:14px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    z-index:20; pointer-events:auto; touch-action:manipulation;
-    line-height:1;
-  `;
-  settingsBtn.addEventListener('pointerdown', e=>e.stopPropagation());
-  settingsBtn.addEventListener('click', e=>{
-    e.stopPropagation();
-    // افتح أدوات وأظهر الإعدادات
-    openSheet('tools');
-    setTimeout(()=>{
-      const ctrl=$id('bgControls');
-      if(ctrl) ctrl.style.display='flex';
-      ctrl?.scrollIntoView({behavior:'smooth',block:'nearest'});
-    }, 150);
-  });
-  frame.appendChild(settingsBtn);
-
   const rl=document.createElement('div'); rl.className='rot-line'; frame.appendChild(rl);
   ['tl','tr','bl','br','tm','bm','lm','rm','rot'].forEach(cls=>{
     const h=document.createElement('div'); h.className=`bg-handle ${cls}`; h.dataset.h=cls; frame.appendChild(h);
@@ -655,17 +629,17 @@ function setBgImage(dataUrl){
     bgProps.y = 2 * cellTotal;
     bgDragEnable = true;
     if($id('bgDraggable')) $id('bgDraggable').checked = true;
-    // أظهر الإعدادات فوراً
-    const bgCtrl = $id('bgControls');
-    if(bgCtrl) bgCtrl.style.display = 'flex';
     applyBg();
     syncBgControls();
     updateBgPreview(dataUrl);
+    // إظهار الإعدادات فوراً
+    const bgCtrl = $id('bgControls');
+    if(bgCtrl) bgCtrl.style.display = 'flex';
   };
   img.src = dataUrl;
 }
 
-/* ── معاينة الصورة ── */
+/* ── معاينة الصورة — يُظهر المعاينة ويُخفي upload-zone ── */
 function updateBgPreview(dataUrl){
   const uploadZone  = $id('bgUploadZone');
   const previewArea = $id('bgPreviewArea');
@@ -713,7 +687,7 @@ $id('bgDraggable').addEventListener('change',e=>{
 $id('bgToggle').addEventListener('click',()=>{bgVisible=!bgVisible;$id('bgToggle').textContent=bgVisible?'إخفاء':'إظهار';applyBg();});
 $id('bgReset').addEventListener('click',()=>{bgProps.w=0;applyBg();syncBgControls();});
 $id('bgRemove').addEventListener('click',()=>{
-  bgImg=null;bgL.innerHTML='';bgL.style.cssText='';
+  bgImg=null; bgL.innerHTML=''; bgL.style.cssText='';
   $id('bgFileInput').value='';
   updateBgPreview(null);
 });;
@@ -1939,22 +1913,7 @@ $id('btnLoadJSON').addEventListener('click',()=>$id('loadFileInput').click());
 $id('loadFileInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=ev=>{
-    try{
-      const d=JSON.parse(ev.target.result);
-      initGrid(d.cols||24, d.rows||24);
-      grid=d.grid||grid;
-      if(d.gapH)gapH=d.gapH; if(d.gapV)gapV=d.gapV; if(d.gapD)gapD=d.gapD;
-      if(d.cellColors)cellColors=d.cellColors;
-      if(d.gapHColors)gapHColors=d.gapHColors;
-      if(d.gapVColors)gapVColors=d.gapVColors;
-      if(d.gapDColors)gapDColors=d.gapDColors;
-      if(d.drawColor){drawColor=d.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor; if(typeof buildSwatches==='function')buildSwatches();}
-      if(d.bgProps)Object.assign(bgProps,d.bgProps);
-      if(d.bgImg){bgImg=d.bgImg;applyBg();updateBgPreview(d.bgImg);const c=$id('bgControls');if(c)c.style.display='flex';}
-      renderGrid();
-    }catch(err){alert('خطأ في تحميل الملف');}
-  };
+  rd.onload=ev=>{ loadKufiJSON(ev.target.result); };
   rd.readAsText(f); e.target.value='';
 });
 
@@ -1994,23 +1953,59 @@ window.addEventListener('keydown',e=>{
 })();
 
 /* ══════════ SHARE TARGET ══════════ */
+/* -- صورة مرجعية -- */
 if(location.search.includes('share-target')){
   window.addEventListener('load', async ()=>{
     try{
-      const cache = await caches.open('kufimaker-share');
-      const res   = await cache.match('shared-image');
-      if(!res) return;
-      const blob  = await res.blob();
-      const url   = URL.createObjectURL(blob);
-      await cache.delete('shared-image');
-      setTimeout(()=>{
-        setBgImage(url);
-        const drag = $id('bgDraggable');
-        if(drag) drag.checked = true;
-        openSheet('bg');
-      }, 600);
+      // صورة
+      const imgCache = await caches.open('kufimaker-share');
+      const imgRes   = await imgCache.match('shared-image');
+      if(imgRes){
+        const blob = await imgRes.blob();
+        const url  = URL.createObjectURL(blob);
+        await imgCache.delete('shared-image');
+        setTimeout(()=>{
+          setBgImage(url);
+          if($id('bgDraggable')) $id('bgDraggable').checked=true;
+          openSheet('bg');
+        }, 600);
+        return;
+      }
+      // ملف JSON
+      const jsonCache = await caches.open('kufimaker-share');
+      const jsonRes   = await jsonCache.match('shared-json');
+      if(jsonRes){
+        const text = await jsonRes.text();
+        await jsonCache.delete('shared-json');
+        setTimeout(()=>{ loadKufiJSON(text); }, 600);
+      }
     }catch(e){ console.warn('[ShareTarget]', e); }
   });
+}
+
+/* دالة موحدة لتحميل JSON بتحقق من الصحة */
+function loadKufiJSON(text){
+  try{
+    const d = JSON.parse(text);
+    // تحقق بسيط: يجب أن يحتوي على cols و rows و grid
+    if(!d.cols || !d.rows || !Array.isArray(d.grid)){
+      showConfirm('الملف غير صحيح أو ليس ملف kufiMaker', null);
+      return;
+    }
+    initGrid(d.cols, d.rows);
+    grid = d.grid;
+    if(d.gapH)gapH=d.gapH; if(d.gapV)gapV=d.gapV; if(d.gapD)gapD=d.gapD;
+    if(d.cellColors)cellColors=d.cellColors;
+    if(d.gapHColors)gapHColors=d.gapHColors;
+    if(d.gapVColors)gapVColors=d.gapVColors;
+    if(d.gapDColors)gapDColors=d.gapDColors;
+    if(d.drawColor){drawColor=d.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor;if(typeof buildSwatches==='function')buildSwatches();}
+    if(d.bgProps)Object.assign(bgProps,d.bgProps);
+    if(d.bgImg){bgImg=d.bgImg;applyBg();updateBgPreview(d.bgImg);const c=$id('bgControls');if(c)c.style.display='flex';}
+    renderGrid();
+  }catch(err){
+    showConfirm('الملف غير صحيح أو تالف — تعذّر تحميله', null);
+  }
 }
 
 /* ══════════ PWA INSTALL ══════════ */
