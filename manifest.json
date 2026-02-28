@@ -8,10 +8,7 @@
   "display": "standalone",
   "display_override": [
     "standalone",
-    "fullscreen",
-    "minimal-ui",
-    "browser",
-    "window-controls-overlay"
+    "fullscreen"
   ],
   "orientation": "any",
   "background_color": "#0a0c10",
