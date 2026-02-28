@@ -6,14 +6,27 @@
   "start_url": "/kufiMaker/",
   "scope": "/kufiMaker/",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui",
+    "browser",
+    "window-controls-overlay"
+  ],
   "orientation": "any",
   "background_color": "#0a0c10",
   "theme_color": "#111318",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["art", "productivity", "education", "design"],
-  "launch_handler": { "client_mode": "focus-existing" },
+  "categories": [
+    "art",
+    "productivity",
+    "education",
+    "design"
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "prefer_related_applications": false,
   "icons": [
     {
@@ -36,55 +49,83 @@
     }
   ],
   "screenshots": [
-  {
-    "src": "screenshots/screenshot1.png",
-    "sizes": "1080x2200",
-    "type": "image/png",
-    "form_factor": "narrow",
-    "label": "صفحة التوجيه الرئيسية"
-  },
-  {
-    "src": "screenshots/screenshot2.png",
-    "sizes": "1080x2200",
-    "type": "image/png",
-    "form_factor": "narrow",
-    "label": "واجهة الرسم الرئيسية"
-  },
-  {
-    "src": "screenshots/screenshot3.png",
-    "sizes": "1080x2200",
-    "type": "image/png",
-    "form_factor": "narrow",
-    "label": "(نموذج لرسم تجريبي (أيوب"
-  },
-  {
-    "src": "screenshots/screenshot4.png",
-    "sizes": "1080x2200",
-    "type": "image/png",
-    "form_factor": "narrow",
-    "label": "تعريف التطبيق والمطور"
-  }
-],
+    {
+      "src": "screenshots/screenshot1.png",
+      "sizes": "1080x2200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "صفحة التوجيه الرئيسية"
+    },
+    {
+      "src": "screenshots/screenshot2.png",
+      "sizes": "1080x2200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "واجهة الرسم الرئيسية"
+    },
+    {
+      "src": "screenshots/screenshot3.png",
+      "sizes": "1080x2200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "(نموذج لرسم تجريبي (أيوب"
+    },
+    {
+      "src": "screenshots/screenshot4.png",
+      "sizes": "1080x2200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "تعريف التطبيق والمطور"
+    }
+  ],
   "shortcuts": [
     {
       "name": "ابدأ تصميم جديد",
       "short_name": "جديد",
       "description": "افتح محرر فارغ لتصميم جديد",
       "url": "/kufiMaker/?new=1",
-      "icons": [{ "src": "icons/new-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icons/new-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "عن المطور",
-      "short_name": "صفحة المطور", 
+      "short_name": "صفحة المطور",
       "url": "/kufiMaker/?view=about",
-      "icons": [{ "src": "icons/about-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icons/about-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "استعرض الحروف",
       "short_name": "حروف",
       "description": "عرض جميع الحروف المتاحة",
       "url": "/kufiMaker/?view=letters",
-      "icons": [{ "src": "icons/letters-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icons/letters-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
-  ]
+  ],
+  "share_target": {
+    "method": "POST",
+    "action": "/kufiMaker/?share-target",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "image",
+          "accept": ["image/png", "image/jpeg", "image/webp"]
+        }
+      ]
+    }
+  }
 }
