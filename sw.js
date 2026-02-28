@@ -7,7 +7,7 @@
    · Query params (?new=1, ?view=letters) → always serve index.html
 ═══════════════════════════════════════════════════ */
 
-const CACHE = 'kufimaker-v2';
+const CACHE = 'kufimaker-v3';
 const BASE  = '/kufiMaker';
 
 const PRECACHE = [
@@ -22,6 +22,7 @@ const PRECACHE = [
   BASE + '/icons/icon-512-maskable.png',
   BASE + '/icons/new-192.png',
   BASE + '/icons/letters-192.png',
+  BASE + '/icons/about-192.png',
 ];
 
 /* ── Install ─────────────────────────────────────── */
@@ -51,10 +52,30 @@ self.addEventListener('activate', event => {
 /* ── Fetch ───────────────────────────────────────── */
 self.addEventListener('fetch', event => {
   const req = event.request;
-  if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
   if (!url.protocol.startsWith('http')) return;
+
+  /* Share Target — POST من مشاركة صورة */
+  if (
+    req.method === 'POST' &&
+    url.pathname === BASE + '/' &&
+    url.searchParams.has('share-target')
+  ) {
+    event.respondWith((async () => {
+      try {
+        const formData = await req.formData();
+        const file     = formData.get('image');
+        if (file) {
+          const cache = await caches.open('kufimaker-share');
+          await cache.put('shared-image', new Response(file));
+        }
+      } catch(e) { console.warn('[SW share]', e); }
+      return Response.redirect(BASE + '/?share-target', 303);
+    })());
+    return;
+  }
+
+  if (req.method !== 'GET') return;
 
   /* Shortcut URLs → strip query, serve index.html */
   if (
