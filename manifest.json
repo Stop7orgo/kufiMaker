@@ -8,7 +8,10 @@
   "display": "standalone",
   "display_override": [
     "standalone",
-    "fullscreen"
+    "fullscreen",
+    "minimal-ui",
+    "browser",
+    "window-controls-overlay"
   ],
   "orientation": "any",
   "background_color": "#0a0c10",
@@ -121,6 +124,13 @@
         {
           "name": "image",
           "accept": ["image/png", "image/jpeg", "image/webp"]
+        },
+        {
+          "name": "json",
+          "accept": [
+            "application/json",
+            ".json"
+          ]
         }
       ]
     }
