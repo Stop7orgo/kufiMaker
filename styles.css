@@ -443,20 +443,16 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
 .line-dot.filled{background:var(--accent)!important;}
 
 /* ══════════ SELECTION TOOL ══════════ */
-#canvasViewport.select-mode { cursor: crosshair; }
-#selOverlay { pointer-events: none; }
-#selActionBar {
-  font-family: 'Tajawal', sans-serif;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+#canvasViewport.select-mode{cursor:crosshair;}
+#selOverlay{pointer-events:none;}
+.sel-bar-btn{
+  min-width:30px;height:30px;padding:0 8px;
+  border-radius:8px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);
+  cursor:pointer;font-size:13px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Tajawal',sans-serif;
+  transition:background .12s;
 }
-#selActionBar .s-btn {
-  min-width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; font-size: 13px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface2);
-  color: var(--text); cursor: pointer; padding: 0 8px;
-  transition: background .15s;
-}
-#selActionBar .s-btn:hover { background: var(--surface3); }
-#selActionBar .s-btn.danger { color: #ef4444; }
+.sel-bar-btn:hover{background:var(--surface3);}
+.sel-bar-btn.danger{color:#ef4444;}
