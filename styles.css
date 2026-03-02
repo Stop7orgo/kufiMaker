@@ -442,17 +442,151 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
 .line-dot{position:absolute;z-index:5;pointer-events:auto;cursor:crosshair;transition:background .07s;}
 .line-dot.filled{background:var(--accent)!important;}
 
-/* ══════════ SELECTION TOOL ══════════ */
-#canvasViewport.select-mode{cursor:crosshair;}
-#selOverlay{pointer-events:none;}
-.sel-bar-btn{
-  min-width:30px;height:30px;padding:0 8px;
-  border-radius:8px;border:1px solid var(--border);
-  background:var(--surface2);color:var(--text);
-  cursor:pointer;font-size:13px;font-weight:600;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Tajawal',sans-serif;
-  transition:background .12s;
+/* ══════════════════════════════════════════
+   SELECTION TOOL — Frame + Handles
+══════════════════════════════════════════ */
+#canvasViewport.select-mode { cursor: crosshair; }
+
+/* الإطار في مرحلة define */
+.sel-frame {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #42A5F5;
+  background: rgba(66,165,245,0.07);
+  border-radius: 2px;
+  z-index: 22;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: move;
 }
-.sel-bar-btn:hover{background:var(--surface3);}
-.sel-bar-btn.danger{color:#ef4444;}
+
+/* 8 مقابض حول الإطار */
+.sel-handle {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid #42A5F5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 24;
+  box-sizing: border-box;
+  transition: transform .1s, background .1s;
+}
+.sel-handle:hover { background: #42A5F5; transform: translate(-50%,-50%) scale(1.2); }
+.sel-handle[data-h="tl"] { top:0; left:0;   cursor: nwse-resize; }
+.sel-handle[data-h="tm"] { top:0; left:50%; cursor: ns-resize; }
+.sel-handle[data-h="tr"] { top:0; left:100%; cursor: nesw-resize; }
+.sel-handle[data-h="ml"] { top:50%; left:0;  cursor: ew-resize; }
+.sel-handle[data-h="mr"] { top:50%; left:100%; cursor: ew-resize; }
+.sel-handle[data-h="bl"] { top:100%; left:0;  cursor: nesw-resize; }
+.sel-handle[data-h="bm"] { top:100%; left:50%; cursor: ns-resize; }
+.sel-handle[data-h="br"] { top:100%; left:100%; cursor: nwse-resize; }
+
+/* شارة الأبعاد (W×H) */
+.sel-dim-badge {
+  position: absolute;
+  bottom: -26px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px; color: #42A5F5;
+  background: var(--surface);
+  padding: 2px 8px; border-radius: 10px;
+  border: 1px solid rgba(66,165,245,0.4);
+  font-family: 'Tajawal', sans-serif;
+  white-space: nowrap; pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* أزرار التحكم على الإطار */
+.sel-ctrl-bar {
+  position: absolute;
+  top: -42px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  white-space: nowrap; pointer-events: auto;
+}
+.sel-ctrl-label {
+  font-size: 11px; color: var(--muted);
+  font-family: 'Tajawal',sans-serif;
+  margin-left: 4px;
+}
+.sel-ctrl-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900;
+  touch-action: manipulation;
+  transition: transform .1s, opacity .1s;
+}
+.sel-ctrl-btn:hover { transform: scale(1.1); }
+.sel-ctrl-btn.commit { background: #42A5F5; color: #fff; box-shadow: 0 2px 8px rgba(66,165,245,0.5); }
+.sel-ctrl-btn.cancel { background: var(--surface2); color: var(--muted); }
+.sel-ctrl-btn.cancel:hover { color: #ef4444; }
+
+/* overlay في مرحلة float */
+.sel-float {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed rgba(66,165,245,0.85);
+  background: rgba(66,165,245,0.06);
+  border-radius: 2px;
+  z-index: 22;
+  cursor: move;
+  pointer-events: auto;
+  touch-action: none;
+  transition: border-color .12s;
+}
+.sel-float:hover { border-color: #42A5F5; background: rgba(66,165,245,0.11); }
+.sel-float-badge {
+  position: absolute;
+  top: -26px; right: 0;
+  font-size: 11px; color: #42A5F5;
+  background: var(--surface);
+  padding: 2px 8px; border-radius: 10px;
+  border: 1px solid rgba(66,165,245,0.4);
+  font-family: 'Tajawal', sans-serif;
+  white-space: nowrap; pointer-events: none;
+}
+.sel-float-hint {
+  position: absolute;
+  bottom: -20px; left: 0;
+  font-size: 9px; color: var(--muted);
+  font-family: 'Tajawal', sans-serif;
+  white-space: nowrap; pointer-events: none;
+}
+.sel-float-commit {
+  position: absolute;
+  top: -14px; left: -14px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #42A5F5; color: #fff;
+  border: 2.5px solid #fff;
+  font-size: 14px; font-weight: 900;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 25; pointer-events: auto; touch-action: manipulation;
+  box-shadow: 0 2px 10px rgba(66,165,245,0.55);
+  transition: transform .12s;
+}
+.sel-float-commit:hover { transform: scale(1.12); background: #1E88E5; }
+.sel-float-cancel {
+  position: absolute;
+  top: -14px; left: 18px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--surface2); color: var(--muted);
+  border: 1.5px solid var(--border);
+  font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 25; pointer-events: auto; touch-action: manipulation;
+  transition: color .1s, border-color .1s;
+}
+.sel-float-cancel:hover { color: #ef4444; border-color: #ef4444; }
