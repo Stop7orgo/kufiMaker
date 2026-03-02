@@ -397,100 +397,16 @@ function floodFill(sx,sy){
   updateStatus();
 }
 
-/* ══════════ SELECTION TOOL STATE ══════════ */
-let selState='idle'; // idle | drawing | selected | moving
-let selStart={x:-1,y:-1}, selEnd={x:-1,y:-1};
-let selMoveFrom={x:0,y:0};
-let selOverlay=null;
-
-function _selRect(){
-  const x1=Math.min(selStart.x,selEnd.x),y1=Math.min(selStart.y,selEnd.y);
-  const x2=Math.max(selStart.x,selEnd.x),y2=Math.max(selStart.y,selEnd.y);
-  return{x1,y1,x2,y2};
-}
-function clearSelection(){
-  selStart={x:-1,y:-1};selEnd={x:-1,y:-1};selState='idle';
-  if(selOverlay){selOverlay.remove();selOverlay=null;}
-  const sb=$id('selActionBar');if(sb)sb.style.display='none';
-}
-function drawSelOverlay(){
-  if(selOverlay){selOverlay.remove();selOverlay=null;}
-  if(selStart.x<0)return;
-  const r=_selRect(), total=cellSz+gapSz;
-  const gcR=gc.getBoundingClientRect(),vpR=vp.getBoundingClientRect();
-  const ox=gcR.left-vpR.left+vp.scrollLeft+20*zoom;
-  const oy=gcR.top-vpR.top+vp.scrollTop+20*zoom;
-  selOverlay=document.createElement('div');
-  selOverlay.id='selOverlay';
-  selOverlay.style.cssText=`position:absolute;pointer-events:none;z-index:15;box-sizing:border-box;
-    border:2px dashed rgba(66,165,245,0.9);background:rgba(66,165,245,0.08);
-    left:${ox+r.x1*total*zoom}px;top:${oy+r.y1*total*zoom}px;
-    width:${(r.x2-r.x1+1)*total*zoom}px;height:${(r.y2-r.y1+1)*total*zoom}px;`;
-  ['tl','tr','bl','br'].forEach(p=>{
-    const h=document.createElement('div');
-    h.style.cssText=`position:absolute;width:10px;height:10px;border-radius:50%;
-      background:#42A5F5;border:2px solid #fff;pointer-events:none;
-      ${p.includes('t')?'top:-5px;':'bottom:-5px;'}${p.includes('l')?'left:-5px;':'right:-5px;'}`;
-    selOverlay.appendChild(h);
-  });
-  vp.appendChild(selOverlay);
-}
-function moveSelection(dx,dy){
-  if(selStart.x<0)return;
-  const r=_selRect();
-  if(r.x1+dx<0||r.y1+dy<0||r.x2+dx>=cols||r.y2+dy>=rows)return;
-  saveState();
-  const snap={cells:[],gH:[],gV:[],gD:[]};
-  for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
-    snap.cells.push({x,y,v:grid[y][x],c:cellColors[`${x},${y}`]});
-    if(x<cols-1)snap.gV.push({x,y,v:gapV[y]?.[x]||0,c:gapVColors[`${x},${y}`]});
-    if(y<rows-1)snap.gH.push({x,y,v:gapH[y]?.[x]||0,c:gapHColors[`${x},${y}`]});
-    if(x<cols-1&&y<rows-1)snap.gD.push({x,y,v:gapD[y]?.[x]||0,c:gapDColors[`${x},${y}`]});
-  }
-  for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
-    grid[y][x]=0;delete cellColors[`${x},${y}`];
-    if(gapV[y]&&x<cols-1){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
-    if(y<rows-1&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
-    if(y<rows-1&&x<cols-1&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
-  }
-  snap.cells.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;grid[ny][nx]=v;if(v)cellColors[`${nx},${ny}`]=c||drawColor;});
-  snap.gV.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(gapV[ny]&&nx<cols-1){gapV[ny][nx]=v;if(v&&c)gapVColors[`${nx},${ny}`]=c;}});
-  snap.gH.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(ny<rows-1&&gapH[ny]){gapH[ny][nx]=v;if(v&&c)gapHColors[`${nx},${ny}`]=c;}});
-  snap.gD.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(ny<rows-1&&nx<cols-1&&gapD[ny]){gapD[ny][nx]=v;if(v&&c)gapDColors[`${nx},${ny}`]=c;}});
-  selStart={x:selStart.x+dx,y:selStart.y+dy};
-  selEnd={x:selEnd.x+dx,y:selEnd.y+dy};
-  renderGrid();drawSelOverlay();
-}
-
 /* ══════════ POINTER EVENTS ══════════ */
 vp.addEventListener('pointerdown',e=>{
-  // ── أداة التحديد — أولوية كاملة، توقف الأدوات الأخرى ──
-  if(tool==='select'){
-    if(e.target.closest?.('#selActionBar'))return;
-    const cell=getCell(e); if(!cell)return;
-    if(selState==='selected'){
-      const r=_selRect();
-      if(cell.x>=r.x1&&cell.x<=r.x2&&cell.y>=r.y1&&cell.y<=r.y2){
-        selState='moving';
-        selMoveFrom={x:cell.x,y:cell.y};
-        vp.setPointerCapture(e.pointerId);
-        e.preventDefault();e.stopImmediatePropagation();return;
-      }
-    }
-    clearSelection();
-    selState='drawing';
-    selStart={x:cell.x,y:cell.y};selEnd={x:cell.x,y:cell.y};
-    drawSelOverlay();
-    vp.setPointerCapture(e.pointerId);
-    e.preventDefault();e.stopImmediatePropagation();return;
-  }
-
   if(tool==='pan'){
     panActive=true;
     panStart={mx:e.clientX,my:e.clientY,sx:vp.scrollLeft,sy:vp.scrollTop};
     vp.setPointerCapture(e.pointerId); return;
   }
   if(e.target.closest?.('.block-overlay')) return;
+
+  // Gap element click — toggle on first press, fill-only on drag
   const gt=e.target.dataset.gtype;
   if(gt){
     saveState();
@@ -498,6 +414,7 @@ vp.addEventListener('pointerdown',e=>{
     gapDrawing=true;
     vp.setPointerCapture(e.pointerId); return;
   }
+
   const cell=getCell(e); if(!cell) return;
   if(tool==='fill'){floodFill(cell.x,cell.y);return;}
   isDrawing=true;
@@ -508,22 +425,6 @@ vp.addEventListener('pointerdown',e=>{
 });
 
 vp.addEventListener('pointermove',e=>{
-  // ── تحديد ──
-  if(tool==='select'){
-    const cell=getCell(e);
-    if(cell){coordsBar.textContent=`X: ${cell.x} — Y: ${cell.y}`;$id('statusX').textContent=cell.x;$id('statusY').textContent=cell.y;}
-    if(selState==='drawing'&&cell){
-      if(cell.x!==selEnd.x||cell.y!==selEnd.y){selEnd={x:cell.x,y:cell.y};drawSelOverlay();}
-      e.preventDefault();return;
-    }
-    if(selState==='moving'&&cell){
-      const dx=cell.x-selMoveFrom.x,dy=cell.y-selMoveFrom.y;
-      if(dx||dy){moveSelection(dx,dy);selMoveFrom={x:cell.x,y:cell.y};}
-      e.preventDefault();return;
-    }
-    return;
-  }
-
   if(panActive){
     vp.scrollLeft=panStart.sx-(e.clientX-panStart.mx);
     vp.scrollTop=panStart.sy-(e.clientY-panStart.my); return;
@@ -545,14 +446,6 @@ vp.addEventListener('pointermove',e=>{
 });
 
 vp.addEventListener('pointerup',e=>{
-  if(tool==='select'){
-    if(selState==='drawing'){
-      selState='selected';drawSelOverlay();
-      const sb=$id('selActionBar');if(sb)sb.style.display='flex';
-    }else if(selState==='moving'){selState='selected';}
-    try{vp.releasePointerCapture(e.pointerId);}catch(er){}
-    return;
-  }
   isDrawing=false; panActive=false; gapDrawing=false;
   try{vp.releasePointerCapture(e.pointerId);}catch(err){}
 });
@@ -935,36 +828,439 @@ $id('quickColor').addEventListener('input',e=>setDrawColorFull(e.target.value));
 function setTool(t){
   tool=t;
   document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
-  vp.classList.toggle('pan-mode',t==='pan');
-  vp.classList.toggle('select-mode',t==='select');
+  vp.classList.toggle('pan-mode',  t==='pan');
+  vp.classList.toggle('select-mode', t==='select');
   $id('statusTool').textContent={draw:'رسم',erase:'ممحاة',fill:'ملء',pan:'تحريك',select:'تحديد'}[t]||t;
-  const sb=$id('selActionBar');if(sb)sb.style.display=(t==='select'?'flex':'none');
-  if(t!=='select')clearSelection();
+  if(t!=='select') SEL.reset();
 }
 document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
 
-/* ── أزرار شريط التحديد ── */
-document.addEventListener('click',e=>{
-  const btn=e.target.closest('button');if(!btn)return;
-  if(btn.id==='selMoveUp')   moveSelection(0,-1);
-  if(btn.id==='selMoveDown') moveSelection(0,1);
-  if(btn.id==='selMoveLeft') moveSelection(-1,0);
-  if(btn.id==='selMoveRight')moveSelection(1,0);
-  if(btn.id==='selDeselect') clearSelection();
-  if(btn.id==='selClear'){
-    if(selStart.x<0)return;
-    const r=_selRect();saveState();
-    for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
-      grid[y][x]=0;delete cellColors[`${x},${y}`];
-      if(gapV[y]&&x<cols-1){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
-      if(y<rows-1&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
-      if(y<rows-1&&x<cols-1&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
-    }
-    renderGrid();clearSelection();
+/* ══════════════════════════════════════════════════════════════════
+   SELECTION SYSTEM — SEL
+   
+   المراحل:
+   ┌ define ─ ظهور إطار فوري عند الضغطة الأولى
+   │           8 مقابض لتعديل الحواف بدقة
+   │           سحب الجسم لنقل الإطار كله
+   │           شارة أبعاد W×H
+   │           زر ✓ لتأكيد → float
+   │           زر ✕ لإلغاء
+   └ float  ─ المحتوى يُرفع كـ overlay قابل للسحب
+               نفس نظام block-overlay
+               زر ✓ لتثبيت نهائي
+               زر ✕ للتراجع بـ undo
+   
+   لوحة المفاتيح:
+   S    → تفعيل الأداة
+   Enter → define→float أو float→stamp
+   Esc   → إلغاء / تراجع
+   ↑↓←→ → في define: توسيع الحافة اليمنى/السفلى
+           في float:  نقل المحتوى خلية بخلية
+══════════════════════════════════════════════════════════════════ */
+const SEL = (() => {
+  const PAD = 20;               // gc padding بالبكسل (pre-zoom)
+  let phase = 'idle';           // idle | define | float
+  let x1=0,y1=0,x2=0,y2=0;    // إطار التحديد (خلايا)
+  let frameEl = null;           // .sel-frame
+  let floatEl = null;           // .sel-float
+  let data    = null;           // { cells, gH, gV, gD, ox, oy, w, h }
+  let hdrag   = null;           // سحب مقبض { h, ox1,oy1,ox2,oy2 }
+  let fdrag   = null;           // سحب الإطار { sx,sy, ox1,oy1,ox2,oy2 }
+
+  /* ── تحويل إحداثيات شاشة → خلية (مقيّدة بحدود الشبكة) ── */
+  function toCell(cx,cy){
+    const T=cellSz+gapSz, r=gc.getBoundingClientRect();
+    return {
+      x: Math.max(0,Math.min(cols-1, Math.round(((cx-r.left)/zoom-PAD)/T - 0.5))),
+      y: Math.max(0,Math.min(rows-1, Math.round(((cy-r.top )/zoom-PAD)/T - 0.5)))
+    };
   }
+  /* ── خلية → بكسل داخل gc (قبل zoom) ── */
+  function toPx(cx,cy){
+    const T=cellSz+gapSz;
+    return { px: PAD+cx*T, py: PAD+cy*T };
+  }
+  /* ── normalize ── */
+  function norm(){ return { x1:Math.min(x1,x2),y1:Math.min(y1,y2),x2:Math.max(x1,x2),y2:Math.max(y1,y2) }; }
+
+  /* ══ بناء / تحديث الإطار ══ */
+  function buildFrame(){
+    const {x1:nx1,y1:ny1,x2:nx2,y2:ny2}=norm();
+    const T=cellSz+gapSz;
+    const L=PAD+nx1*T, To=PAD+ny1*T;
+    const W=(nx2-nx1+1)*T, H=(ny2-ny1+1)*T;
+
+    if(!frameEl){
+      frameEl=document.createElement('div');
+      frameEl.className='sel-frame';
+
+      /* ── شريط أزرار التحكم ── */
+      const bar=document.createElement('div');
+      bar.className='sel-ctrl-bar';
+      const lbl=document.createElement('span');
+      lbl.className='sel-ctrl-label'; lbl.textContent='تأكيد التحديد';
+      const commitBtn=document.createElement('button');
+      commitBtn.className='sel-ctrl-btn commit'; commitBtn.title='تأكيد (Enter)'; commitBtn.innerHTML='✓';
+      commitBtn.addEventListener('pointerdown',e=>e.stopPropagation());
+      commitBtn.addEventListener('click',e=>{e.stopPropagation(); commitFrame();});
+      const cancelBtn=document.createElement('button');
+      cancelBtn.className='sel-ctrl-btn cancel'; cancelBtn.title='إلغاء (Esc)'; cancelBtn.innerHTML='✕';
+      cancelBtn.addEventListener('pointerdown',e=>e.stopPropagation());
+      cancelBtn.addEventListener('click',e=>{e.stopPropagation(); reset();});
+      bar.appendChild(lbl); bar.appendChild(commitBtn); bar.appendChild(cancelBtn);
+      frameEl.appendChild(bar);
+
+      /* ── شارة الأبعاد ── */
+      const dim=document.createElement('div');
+      dim.className='sel-dim-badge'; dim.id='_selDim';
+      frameEl.appendChild(dim);
+
+      /* ── 8 مقابض ── */
+      ['tl','tm','tr','ml','mr','bl','bm','br'].forEach(h=>{
+        const hEl=document.createElement('div');
+        hEl.className='sel-handle'; hEl.dataset.h=h;
+        hEl.addEventListener('pointerdown',ev=>{
+          ev.stopPropagation(); ev.preventDefault();
+          hEl.setPointerCapture(ev.pointerId);
+          const n=norm();
+          hdrag={h, ox1:n.x1,oy1:n.y1,ox2:n.x2,oy2:n.y2};
+        });
+        hEl.addEventListener('pointermove',ev=>{
+          if(!hdrag||hdrag.h!==h) return;
+          ev.stopPropagation();
+          const c=toCell(ev.clientX,ev.clientY);
+          const {h:hh,ox1,oy1,ox2,oy2}=hdrag;
+          // تحديث الحواف المناسبة فقط
+          if(hh.includes('l')) x1=Math.min(c.x,ox2);
+          if(hh.includes('r')) x2=Math.max(c.x,ox1);
+          if(hh.includes('t')) y1=Math.min(c.y,oy2);
+          if(hh.includes('b')) y2=Math.max(c.y,oy1);
+          if(hh==='ml'||hh==='mr'){y1=oy1;y2=oy2;}
+          if(hh==='tm'||hh==='bm'){x1=ox1;x2=ox2;}
+          updateFrame();
+        });
+        hEl.addEventListener('pointerup',ev=>{
+          try{hEl.releasePointerCapture(ev.pointerId);}catch(_){}
+          hdrag=null;
+        });
+        frameEl.appendChild(hEl);
+      });
+
+      /* ── سحب جسم الإطار لنقله ── */
+      frameEl.addEventListener('pointerdown',ev=>{
+        if(ev.target.classList.contains('sel-handle')||
+           ev.target.closest('.sel-ctrl-bar')) return;
+        ev.stopPropagation(); ev.preventDefault();
+        frameEl.setPointerCapture(ev.pointerId);
+        const n=norm();
+        fdrag={sx:ev.clientX,sy:ev.clientY,ox1:n.x1,oy1:n.y1,ox2:n.x2,oy2:n.y2};
+      });
+      frameEl.addEventListener('pointermove',ev=>{
+        if(!fdrag) return; ev.stopPropagation();
+        const T=cellSz+gapSz;
+        const ddx=Math.round((ev.clientX-fdrag.sx)/(T*zoom));
+        const ddy=Math.round((ev.clientY-fdrag.sy)/(T*zoom));
+        const w=fdrag.ox2-fdrag.ox1, h2=fdrag.oy2-fdrag.oy1;
+        let nx1=Math.max(0,Math.min(cols-1-w, fdrag.ox1+ddx));
+        let ny1=Math.max(0,Math.min(rows-1-h2,fdrag.oy1+ddy));
+        x1=nx1;y1=ny1;x2=nx1+w;y2=ny1+h2;
+        updateFrame();
+      });
+      frameEl.addEventListener('pointerup',ev=>{
+        try{frameEl.releasePointerCapture(ev.pointerId);}catch(_){} fdrag=null;
+      });
+      frameEl.addEventListener('pointercancel',ev=>{fdrag=null;});
+
+      gc.appendChild(frameEl);
+    }
+
+    /* ── تحديث موضع وأبعاد الإطار ── */
+    frameEl.style.left=L+'px'; frameEl.style.top=To+'px';
+    frameEl.style.width=W+'px'; frameEl.style.height=H+'px';
+
+    // شارة الأبعاد
+    const d=$id('_selDim');
+    if(d) d.textContent=`${nx2-nx1+1} × ${ny2-ny1+1}`;
+  }
+
+  function updateFrame(){ if(frameEl) buildFrame(); }
+
+  /* ══ تأكيد الإطار → رفع المحتوى ══ */
+  function commitFrame(){
+    const {x1:nx1,y1:ny1,x2:nx2,y2:ny2}=norm();
+
+    // جمع المحتوى (بإحداثيات نسبية)
+    const cells=[],gH=[],gV=[],gD=[];
+    for(let y=ny1;y<=ny2;y++) for(let x=nx1;x<=nx2;x++){
+      const lx=x-nx1,ly=y-ny1;
+      if(grid[y]?.[x]) cells.push({lx,ly,c:cellColors[`${x},${y}`]||drawColor});
+      if(x<nx2&&gapV[y]?.[x]) gV.push({lx,ly,c:gapVColors[`${x},${y}`]||drawColor});
+      if(y<ny2&&gapH[y]?.[x]) gH.push({lx,ly,c:gapHColors[`${x},${y}`]||drawColor});
+      if(x<nx2&&y<ny2&&gapD[y]?.[x]) gD.push({lx,ly,c:gapDColors[`${x},${y}`]||drawColor});
+    }
+
+    // لا شيء في المنطقة — reset فقط
+    if(!cells.length&&!gH.length&&!gV.length&&!gD.length){ reset(); return; }
+
+    saveState();
+
+    // امسح المنطقة
+    for(let y=ny1;y<=ny2;y++) for(let x=nx1;x<=nx2;x++){
+      grid[y][x]=0; delete cellColors[`${x},${y}`];
+      const el=cellEl(x,y);
+      if(el){el.classList.remove('filled');el.style.background='';el.style.borderRadius=`${cellRad}px`;}
+      if(x<nx2&&gapV[y]){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
+      if(y<ny2&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
+      if(x<nx2&&y<ny2&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
+    }
+    renderGapElements(); refreshAllRadius();
+
+    data={cells,gH,gV,gD, ox:nx1,oy:ny1, w:nx2-nx1+1,h:ny2-ny1+1};
+
+    // أزل الإطار
+    if(frameEl){frameEl.remove();frameEl=null;}
+
+    // ارسم وأنشئ الـ float overlay
+    stamp();
+    buildFloat();
+    phase='float';
+  }
+
+  /* ══ rسم / مسح المحتوى على الشبكة ══ */
+  function stamp(){
+    const b=data; if(!b) return;
+    b.cells.forEach(({lx,ly,c})=>{
+      const x=b.ox+lx,y=b.oy+ly;
+      if(x<0||x>=cols||y<0||y>=rows) return;
+      grid[y][x]=1; cellColors[`${x},${y}`]=c;
+      const el=cellEl(x,y);
+      if(el){el.classList.add('filled');el.style.background=c;}
+    });
+    b.gV.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows&&x>=0&&x<cols-1&&gapV[y]){gapV[y][x]=1;gapVColors[`${x},${y}`]=c;}});
+    b.gH.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows-1&&x>=0&&x<cols&&gapH[y]){gapH[y][x]=1;gapHColors[`${x},${y}`]=c;}});
+    b.gD.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows-1&&x>=0&&x<cols-1&&gapD[y]){gapD[y][x]=1;gapDColors[`${x},${y}`]=c;}});
+    b.cells.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(x>=0&&x<cols&&y>=0&&y<rows)refreshRadiusAround(x,y);});
+    renderGapElements(); refreshAllRadius();
+  }
+  function erase(){
+    const b=data; if(!b) return;
+    b.cells.forEach(({lx,ly})=>{
+      const x=b.ox+lx,y=b.oy+ly;
+      if(x<0||x>=cols||y<0||y>=rows) return;
+      grid[y][x]=0; delete cellColors[`${x},${y}`];
+      const el=cellEl(x,y);
+      if(el){el.classList.remove('filled');el.style.background='';el.style.borderRadius=`${cellRad}px`;}
+    });
+    b.gV.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapV[y]){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}});
+    b.gH.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}});
+    b.gD.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}});
+    b.cells.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(x>=0&&x<cols&&y>=0&&y<rows)refreshRadiusAround(x,y);});
+  }
+
+  /* ══ بناء Float Overlay ══ */
+  function buildFloat(){
+    const b=data; if(!b) return;
+    if(floatEl){floatEl.remove();}
+
+    const div=document.createElement('div');
+    div.className='sel-float';
+    floatEl=div;
+    reposFloat();
+
+    // شارة عدد الخلايا
+    const cnt=b.cells.length+(b.gH?.length||0)+(b.gV?.length||0);
+    const badge=document.createElement('div'); badge.className='sel-float-badge';
+    badge.textContent=`${cnt} عنصر`;
+    div.appendChild(badge);
+
+    // تلميح
+    const hint=document.createElement('div'); hint.className='sel-float-hint';
+    hint.textContent='اسحب • أسهم للنقل الدقيق';
+    div.appendChild(hint);
+
+    // زر تثبيت نهائي
+    const cb=document.createElement('button');
+    cb.className='sel-float-commit'; cb.title='تثبيت (Enter)'; cb.innerHTML='✓';
+    cb.addEventListener('pointerdown',e=>e.stopPropagation());
+    cb.addEventListener('click',e=>{e.stopPropagation(); finalStamp();});
+    div.appendChild(cb);
+
+    // زر إلغاء (undo)
+    const xb=document.createElement('button');
+    xb.className='sel-float-cancel'; xb.title='إلغاء (Esc)'; xb.innerHTML='✕';
+    xb.addEventListener('pointerdown',e=>e.stopPropagation());
+    xb.addEventListener('click',e=>{e.stopPropagation(); undo(); reset();});
+    div.appendChild(xb);
+
+    // سحب الـ float
+    let ds=null;
+    div.addEventListener('pointerdown',ev=>{
+      if(ev.target===cb||ev.target===xb) return;
+      ev.stopPropagation(); ev.preventDefault();
+      div.setPointerCapture(ev.pointerId);
+      ds={sx:ev.clientX,sy:ev.clientY,ox:b.ox,oy:b.oy,ldx:0,ldy:0};
+      erase(); renderGapElements(); refreshAllRadius();
+    });
+    div.addEventListener('pointermove',ev=>{
+      if(!ds) return; ev.stopPropagation();
+      const T=cellSz+gapSz;
+      const ddx=Math.round((ev.clientX-ds.sx)/(T*zoom));
+      const ddy=Math.round((ev.clientY-ds.sy)/(T*zoom));
+      if(ddx===ds.ldx&&ddy===ds.ldy) return;
+      const ok=b.cells.every(({lx,ly})=>{
+        const nx=ds.ox+lx+ddx,ny=ds.oy+ly+ddy;
+        return nx>=0&&nx<cols&&ny>=0&&ny<rows;
+      });
+      if(!ok) return;
+      ds.ldx=ddx; ds.ldy=ddy;
+      erase();
+      b.ox=ds.ox+ddx; b.oy=ds.oy+ddy;
+      stamp(); reposFloat();
+    });
+    div.addEventListener('pointerup',ev=>{
+      if(!ds) return;
+      try{div.releasePointerCapture(ev.pointerId);}catch(_){}
+      stamp(); ds=null; reposFloat();
+    });
+    div.addEventListener('pointercancel',ev=>{
+      if(!ds) return;
+      b.ox=ds.ox; b.oy=ds.oy;
+      stamp(); ds=null; reposFloat();
+    });
+
+    gc.appendChild(div);
+  }
+
+  function reposFloat(){
+    if(!floatEl||!data) return;
+    const b=data, T=cellSz+gapSz;
+    floatEl.style.left=(PAD+b.ox*T)+'px';
+    floatEl.style.top =(PAD+b.oy*T)+'px';
+    floatEl.style.width =(b.w*T)+'px';
+    floatEl.style.height=(b.h*T)+'px';
+  }
+
+  /* ══ تثبيت نهائي ══ */
+  function finalStamp(){
+    if(data) stamp();
+    reset();
+    scheduleSessionSave?.();
+  }
+
+  /* ══ إعادة ضبط كامل ══ */
+  function reset(){
+    if(frameEl){frameEl.remove();frameEl=null;}
+    if(floatEl){floatEl.remove();floatEl=null;}
+    data=null; phase='idle'; hdrag=null; fdrag=null;
+  }
+
+  /* ══ nudge بالأسهم ══ */
+  function nudge(dx,dy){
+    if(phase==='define'){
+      x2=Math.max(x1,Math.min(cols-1,x2+dx));
+      y2=Math.max(y1,Math.min(rows-1,y2+dy));
+      updateFrame();
+    } else if(phase==='float'&&data){
+      const b=data;
+      const ok=b.cells.every(({lx,ly})=>{
+        const nx=b.ox+lx+dx,ny=b.oy+ly+dy;
+        return nx>=0&&nx<cols&&ny>=0&&ny<rows;
+      });
+      if(!ok) return;
+      erase(); b.ox+=dx; b.oy+=dy; stamp(); reposFloat();
+    }
+  }
+
+  /* ══ واجهة عامة ══ */
+  return {
+    get phase(){ return phase; },
+    reset,
+    nudge,
+    commit: commitFrame,
+    finalStamp,
+    /* pointerdown على vp بينما tool==='select' */
+    onDown(e){
+      if(e.target.closest?.('.sel-frame,.sel-float,.sel-handle,.sel-ctrl-bar,.sel-float-commit,.sel-float-cancel')) return;
+      const cell=toCell(e.clientX,e.clientY);
+      if(phase==='float') finalStamp();
+      phase='define';
+      x1=cell.x; y1=cell.y; x2=cell.x; y2=cell.y;
+      buildFrame();
+      vp.setPointerCapture(e.pointerId);
+      e.preventDefault(); e.stopImmediatePropagation();
+    },
+    /* pointermove على vp */
+    onMove(e){
+      if(phase==='define'&&!hdrag&&!fdrag){
+        const cell=toCell(e.clientX,e.clientY);
+        x2=cell.x; y2=cell.y;
+        updateFrame();
+        e.preventDefault();
+      }
+    },
+    /* pointerup على vp */
+    onUp(e){
+      try{vp.releasePointerCapture(e.pointerId);}catch(_){}
+    }
+  };
+})();
+
+/* ══════════ POINTER EVENTS ══════════ */
+vp.addEventListener('pointerdown',e=>{
+  if(tool==='select'){ SEL.onDown(e); return; }
+
+  if(tool==='pan'){
+    panActive=true;
+    panStart={mx:e.clientX,my:e.clientY,sx:vp.scrollLeft,sy:vp.scrollTop};
+    vp.setPointerCapture(e.pointerId); return;
+  }
+  if(e.target.closest?.('.block-overlay')) return;
+
+  const gt=e.target.dataset.gtype;
+  if(gt){
+    saveState();
+    applyGapTool(gt,+e.target.dataset.gx,+e.target.dataset.gy, false);
+    gapDrawing=true;
+    vp.setPointerCapture(e.pointerId); return;
+  }
+
+  const cell=getCell(e); if(!cell) return;
+  if(tool==='fill'){floodFill(cell.x,cell.y);return;}
+  isDrawing=true;
+  if(tool==='draw'||tool==='erase') saveState();
+  vp.setPointerCapture(e.pointerId);
+  applyTool(cell.x,cell.y,true);
+  lastX=cell.x; lastY=cell.y;
 });
 
-/* ══════════ GRID CONTROLS ══════════ */
+vp.addEventListener('pointermove',e=>{
+  if(tool==='select'){ SEL.onMove(e); return; }
+
+  if(panActive){
+    vp.scrollLeft=panStart.sx-(e.clientX-panStart.mx);
+    vp.scrollTop=panStart.sy-(e.clientY-panStart.my); return;
+  }
+  const cell=getCell(e);
+  if(cell){
+    coordsBar.textContent=`X: ${cell.x} — Y: ${cell.y}`;
+    $id('statusX').textContent=cell.x; $id('statusY').textContent=cell.y;
+  }
+  if(gapDrawing){
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    if(el&&el.dataset.gtype) applyGapTool(el.dataset.gtype,+el.dataset.gx,+el.dataset.gy);
+    return;
+  }
+  if(!isDrawing||!cell) return;
+  if(cell.x===lastX&&cell.y===lastY) return;
+  applyTool(cell.x,cell.y,false);
+  lastX=cell.x; lastY=cell.y;
+});
+
+vp.addEventListener('pointerup',e=>{
+  if(tool==='select'){ SEL.onUp(e); return; }
+  isDrawing=false; panActive=false; gapDrawing=false;
+  try{vp.releasePointerCapture(e.pointerId);}catch(err){}
+});
 $id('cellSizeR').addEventListener('input',e=>{
   cellSz=+e.target.value; $id('cellSizeVal').textContent=cellSz;
   document.documentElement.style.setProperty('--cell-size',cellSz+'px');
@@ -1815,56 +2111,10 @@ document.querySelectorAll('[data-sheet]').forEach(b=>{
 });
 
 /* ══════════ SESSION STORAGE ══════════ */
-const SESSION_KEY  = 'kufi_session_v2';
-const SETTINGS_KEY = 'kufi_settings_v2';
-const IDB_BG_KEY   = '__kufi_bgimg__';
-let _sessionLocked = false;
-
-function saveBgToIDB(dataUrl){
-  if(!lettersDB) return;
-  try{
-    const tx=lettersDB.transaction('meta','readwrite');
-    if(dataUrl) tx.objectStore('meta').put({k:IDB_BG_KEY,v:dataUrl});
-    else        tx.objectStore('meta').delete(IDB_BG_KEY);
-  }catch(e){}
-}
-function loadBgFromIDB(){
-  return new Promise(res=>{
-    if(!lettersDB){res(null);return;}
-    try{
-      const tx=lettersDB.transaction('meta','readonly');
-      const req=tx.objectStore('meta').get(IDB_BG_KEY);
-      req.onsuccess=()=>res(req.result?.v||null);
-      req.onerror=()=>res(null);
-    }catch(e){res(null);}
-  });
-}
-function _showMissingBgPlaceholder(){
-  const zone=$id('bgUploadZone'),area=$id('bgPreviewArea'),thumb=$id('bgPreviewThumb');
-  if(zone)zone.style.display='none';
-  if(area)area.style.display='block';
-  if(thumb){thumb.src='icons/icon-192.png';thumb.style.opacity='0.35';thumb.style.filter='grayscale(1)';}
-  if(!$id('_bgMissingMsg')){
-    const msg=document.createElement('div');
-    msg.id='_bgMissingMsg';
-    msg.style.cssText='color:#ef4444;font-size:11px;text-align:center;padding:3px 0;';
-    msg.textContent='⚠ صورة مرجعية مفقودة';
-    area?.insertBefore(msg,area.lastElementChild);
-  }
-}
-
-window.addEventListener('pagehide',()=>{if(!_sessionLocked)saveSession();});
-window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&!_sessionLocked)saveSession();});
-
-let sessionTimer=null;
-function scheduleSessionSave(){
-  if(_sessionLocked)return;
-  clearTimeout(sessionTimer);
-  sessionTimer=setTimeout(()=>{if(!_sessionLocked)saveSession();},2000);
-}
+const SESSION_KEY='kufi_session';
+const SETTINGS_KEY='kufi_settings';
 
 function saveSession(){
-  if(_sessionLocked)return;
   try{
     const data={
       cols,rows,
@@ -1876,78 +2126,51 @@ function saveSession(){
       gapHColors:{...gapHColors},
       gapVColors:{...gapVColors},
       gapDColors:{...gapDColors},
-      drawColor,
-      bgProps:{...bgProps},
-      bgVisible,bgDragEnable,
-      hasBgImg:!!bgImg,
+      drawColor,bgProps:{...bgProps},
+      bgImg: bgImg ? bgImg.substring(0,100)+'...' : null, // don't store full image in session
+      bgVisible,
       ts:Date.now()
     };
-    localStorage.setItem(SESSION_KEY,JSON.stringify(data));
-    saveBgToIDB(bgImg);
-  }catch(e){
-    try{localStorage.setItem(SESSION_KEY,JSON.stringify({cols,rows,grid:grid.map(r=>[...r]),ts:Date.now()}));}catch(e2){}
-  }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  }catch(e){/* quota exceeded */}
 }
 
-async function loadSession(data){
-  _sessionLocked=true;
-  try{
-    initGrid(data.cols||24,data.rows||24);
-    grid=data.grid||grid;
-    if(data.gapH)gapH=data.gapH;
-    if(data.gapV)gapV=data.gapV;
-    if(data.gapD)gapD=data.gapD;
-    if(data.cellColors)cellColors=data.cellColors;
-    if(data.gapHColors)gapHColors=data.gapHColors;
-    if(data.gapVColors)gapVColors=data.gapVColors;
-    if(data.gapDColors)gapDColors=data.gapDColors;
-    if(data.drawColor){drawColor=data.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor;if(typeof buildSwatches==='function')buildSwatches();}
-    if(data.bgProps)Object.assign(bgProps,data.bgProps);
-    bgVisible    = data.bgVisible    !=null?data.bgVisible:true;
-    bgDragEnable = data.bgDragEnable !=null?data.bgDragEnable:false;
-    const dd=$id('bgDraggable');if(dd)dd.checked=bgDragEnable;
-    if(data.hasBgImg){
-      const img=await loadBgFromIDB();
-      if(img){bgImg=img;applyBg();updateBgPreview(img);const c=$id('bgControls');if(c)c.style.display='flex';}
-      else _showMissingBgPlaceholder();
-    }
-    renderGrid();
-  }finally{_sessionLocked=false;}
+function loadSession(data){
+  initGrid(data.cols||24, data.rows||24);
+  grid=data.grid||grid;
+  if(data.gapH)gapH=data.gapH;
+  if(data.gapV)gapV=data.gapV;
+  if(data.gapD)gapD=data.gapD;
+  if(data.cellColors)cellColors=data.cellColors;
+  if(data.gapHColors)gapHColors=data.gapHColors;
+  if(data.gapVColors)gapVColors=data.gapVColors;
+  if(data.gapDColors)gapDColors=data.gapDColors;
+  if(data.drawColor){drawColor=data.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor; if(typeof buildSwatches==='function')buildSwatches();}
+  if(data.bgProps)Object.assign(bgProps,data.bgProps);
+  bgVisible=data.bgVisible!==undefined?data.bgVisible:true;
+  renderGrid();
 }
 
 function saveSettings(){
-  try{
-    localStorage.setItem(SETTINGS_KEY,JSON.stringify({
-      cellSz,gapSz,cellRad,drawColor,
-      axisEvery,showAxis,axisColor,
-      showRulers,zoom,
-      canvasBg:vp.style.background||'',
-      bgOpacity:bgProps.opacity,
-      bgBlend:bgProps.blend,
-      bgDragEnable
-    }));
-  }catch(e){}
+  const s={cellSz,gapSz,cellRad,drawColor};
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));
 }
 function loadSettings(){
   try{
     const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
+    if(s.drawColor){drawColor=s.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor; if(typeof buildSwatches==='function')buildSwatches();}
     if(s.cellSz){cellSz=s.cellSz;$id('cellSizeR').value=cellSz;$id('cellSizeVal').textContent=cellSz;document.documentElement.style.setProperty('--cell-size',cellSz+'px');}
     if(s.gapSz){gapSz=s.gapSz;$id('gapSizeR').value=gapSz;$id('gapSizeVal').textContent=gapSz;document.documentElement.style.setProperty('--gap',gapSz+'px');}
     if(s.cellRad){cellRad=s.cellRad;$id('cellRadR').value=cellRad;$id('cellRadVal').textContent=cellRad;}
-    if(s.drawColor){drawColor=s.drawColor;$id('fillColor').value=drawColor;$id('quickColor').value=drawColor;$id('colorPreview').style.background=drawColor;if(typeof buildSwatches==='function')buildSwatches();}
-    if(s.axisEvery!=null){axisEvery=s.axisEvery;const el=$id('axisEveryR');if(el){el.value=axisEvery;$id('axisEveryVal').textContent=axisEvery;}}
-    if(s.showAxis!=null){showAxis=s.showAxis;const cb=$id('showAxis');if(cb)cb.checked=showAxis;}
-    if(s.axisColor){axisColor=s.axisColor;const ai=$id('axisColor');if(ai)ai.value=axisColor;}
-    if(s.showRulers){showRulers=true;const sr=$id('showRulers');if(sr)sr.checked=true;const rH=$id('rulerH'),rV=$id('rulerV');if(rH)rH.style.display='block';if(rV)rV.style.display='block';}
-    if(s.zoom>0){zoom=s.zoom;}
-    if(s.canvasBg){vp.style.background=s.canvasBg;$id('canvasArea').style.background=s.canvasBg;}
-    if(s.bgOpacity!=null)bgProps.opacity=s.bgOpacity;
-    if(s.bgBlend)bgProps.blend=s.bgBlend;
-    if(s.bgDragEnable!=null){bgDragEnable=s.bgDragEnable;const dd=$id('bgDraggable');if(dd)dd.checked=bgDragEnable;}
   }catch(e){}
 }
 
-// Auto-save session every 30s and on grid changes (replaced above with pagehide/visibility)
+// Auto-save session every 30s and on grid changes
+let sessionTimer=null;
+function scheduleSessionSave(){
+  clearTimeout(sessionTimer);
+  sessionTimer=setTimeout(saveSession, 2000);
+}
 
 /* ══════════ WELCOME SCREEN ══════════ */
 function initWelcome(){
@@ -1995,10 +2218,10 @@ function initWelcome(){
     inp.onchange=async e=>{
       const f=e.target.files[0]; if(!f) return;
       const rd=new FileReader();
-      rd.onload=async ev=>{
+      rd.onload=ev=>{
         try{
           const d=JSON.parse(ev.target.result);
-          await loadSession(d);
+          loadSession(d);
           enterApp();
         }catch(er){alert('خطأ في الملف');}
       };
@@ -2007,10 +2230,10 @@ function initWelcome(){
     inp.click();
   });
 
-  $id('wlEnter').addEventListener('click',async ()=>{
+  $id('wlEnter').addEventListener('click',()=>{
     const restoreSelected=$id('wlRestore').style.outline.includes('accent');
     if(restoreSelected && session){
-      await loadSession(session);
+      loadSession(session);
     }
     enterApp();
   });
@@ -2021,13 +2244,9 @@ function initWelcome(){
 
 function enterApp(){
   $id('welcomeScreen').classList.add('hidden');
-  // حفظ الإعدادات عند كل تغيير
-  ['cellSizeR','gapSizeR','cellRadR','axisEveryR'].forEach(id=>{
-    const el=$id(id);if(!el)return;
-    el.addEventListener('input',saveSettings);
-  });
-  ['fillColor','axisColor','showAxis','showRulers','bgDraggable','canvasBgColor'].forEach(id=>{
-    const el=$id(id);if(el)el.addEventListener('change',saveSettings);
+  // Save settings whenever sliders change
+  ['cellSizeR','gapSizeR','cellRadR','fillColor'].forEach(id=>{
+    const el=$id(id); if(el) el.addEventListener('change',saveSettings);
   });
   scheduleSessionSave();
 }
@@ -2186,12 +2405,17 @@ window.addEventListener('keydown',e=>{
     if(e.key==='f'||e.key==='F')setTool('fill');
     if(e.key==='h'||e.key==='H')setTool('pan');
     if(e.key==='s'||e.key==='S')setTool('select');
-    if(tool==='select'&&selState==='selected'){
-      if(e.key==='ArrowUp'){e.preventDefault();moveSelection(0,-1);}
-      if(e.key==='ArrowDown'){e.preventDefault();moveSelection(0,1);}
-      if(e.key==='ArrowLeft'){e.preventDefault();moveSelection(-1,0);}
-      if(e.key==='ArrowRight'){e.preventDefault();moveSelection(1,0);}
-      if(e.key==='Escape')clearSelection();
+    if(tool==='select'){
+      if(e.key==='Enter'){
+        e.preventDefault();
+        if(SEL.phase==='define') SEL.commit();
+        else if(SEL.phase==='float') SEL.finalStamp();
+      }
+      if(e.key==='Escape'){e.preventDefault(); if(SEL.phase==='float'){undo();} SEL.reset();}
+      if(e.key==='ArrowUp')   {e.preventDefault(); SEL.nudge(0,-1);}
+      if(e.key==='ArrowDown') {e.preventDefault(); SEL.nudge(0,1);}
+      if(e.key==='ArrowLeft') {e.preventDefault(); SEL.nudge(-1,0);}
+      if(e.key==='ArrowRight'){e.preventDefault(); SEL.nudge(1,0);}
     }
   }
 });
