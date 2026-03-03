@@ -65,7 +65,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 #topbarRow2{
   height:40px;display:flex;align-items:center;
   padding:0 10px;gap:5px;
-  overflow-x:auto;overflow-y:hidden;
+  /*overflow-x:auto;overflow-y:hidden;*/
 }
 #topbarRow2::-webkit-scrollbar{display:none;}
 
@@ -107,6 +107,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1a1d25;color:var(--text);font-size:11px;font-family:'Tajawal',sans-serif;white-space:nowrap;padding:4px 9px;border-radius:6px;border:1px solid var(--border);pointer-events:none;opacity:0;transition:opacity .15s;z-index:9999;}
 [data-tip]::before{content:'';position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a1d25;pointer-events:none;opacity:0;transition:opacity .15s;z-index:9999;}
 [data-tip]:hover::after,[data-tip]:hover::before{opacity:1;}
+#topbarRow2 button[data-tip]::after{top:calc(100% + 8px);bottom:auto;opacity:0;}
+#topbarRow2 button[data-tip]:hover::after,#topbarRow2 button[data-tip]:hover::before{opacity:1;}
 
 /* ── WELCOME SCREEN ── */
 #welcomeScreen{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:24px;}
@@ -148,11 +150,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
   background:var(--surface);
   border-radius:22px 22px 0 0;
   border-top:1px solid var(--border);
-  height:50vh; min-height:300px;
+  height:82vh; min-height:300px;
   display:flex;flex-direction:column;
   transform:translateY(102%);
   transition:transform .32s cubic-bezier(.4,0,.2,1);
-  position:relative; z-index:1;
+  position:relative; z-index:10001;
   touch-action:pan-x;
 }
 #bottomSheet.open{transform:translateY(0);}
@@ -502,17 +504,19 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
 /* أزرار التحكم على الإطار */
 .sel-ctrl-bar {
   position: absolute;
-  top: -42px; left: 50%;
-  transform: translateX(-50%);
+  top: -15px; left: -15px;
+  transform: translateX(0%);
   display: flex; gap: 6px; align-items: center;
-  background: var(--surface);
+  /*background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 4px 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);*/
   white-space: nowrap; pointer-events: auto;
+  z-index: 99;
 }
 .sel-ctrl-label {
+  display: none;
   font-size: 11px; color: var(--muted);
   font-family: 'Tajawal',sans-serif;
   margin-left: 4px;
@@ -527,8 +531,14 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
   transition: transform .1s, opacity .1s;
 }
 .sel-ctrl-btn:hover { transform: scale(1.1); }
-.sel-ctrl-btn.commit { background: #42A5F5; color: #fff; box-shadow: 0 2px 8px rgba(66,165,245,0.5); }
-.sel-ctrl-btn.cancel { background: var(--surface2); color: var(--muted); }
+.sel-ctrl-btn.commit {
+  border: 2.5px solid #2361f5;
+  border-radius: 50%;
+  background: #238cf538;
+  transform: translate(5%,5%);
+  animation: brush-pulse 1.1s infinite;
+  background: #429df5; color: #fff; box-shadow: 0 2px 8px rgba(66,165,245,0.5); }
+.sel-ctrl-btn.cancel { display:none;background: var(--surface2); color: var(--muted); }
 .sel-ctrl-btn.cancel:hover { color: #ef4444; }
 
 /* overlay في مرحلة float */
@@ -590,3 +600,40 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
   transition: color .1s, border-color .1s;
 }
 .sel-float-cancel:hover { color: #ef4444; border-color: #ef4444; }
+
+
+/* ══════════ BRUSH / PEN TOOL ══════════ */
+.brush-mode-btn {
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  padding:5px;
+}
+.brush-mode-btn.active {
+  background: var(--accent);
+  color: #1a0a00;
+  box-shadow: 0 2px 8px rgba(245,166,35,0.45);
+}
+#canvasViewport.brush-mode { cursor: crosshair; }
+.brush-anchor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  border: 2.5px solid #F5A623;
+  border-radius: 50%;
+  background: rgba(245,166,35,0.22);
+  transform: translate(-50%,-50%);
+  animation: brush-pulse 1.1s infinite;
+}
+@keyframes brush-pulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(245,166,35,0.18); }
+  50%      { box-shadow: 0 0 0 8px rgba(245,166,35,0.05); }
+}
+.brush-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 19;
+  background: rgba(245,166,35,0.15);
+  border: 1.5px dashed rgba(245,166,35,0.5);
+  border-radius: 3px;
+  box-sizing: border-box;
+}
