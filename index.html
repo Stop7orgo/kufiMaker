@@ -77,7 +77,8 @@
   <div class="wl-actions">
     <button class="wl-btn primary" id="wlEnter">ابدأ التصميم →</button>
   </div>
-  <div class="wl-restore-info" id="wlInfo"></div>
+ <div class="wl-restore-info" id="wlother">استخدام التطبيق يعني الموافقة على السياسات والاحكام</div>
+ <div class="wl-restore-info" id="wlInfo"></div>
 </div>
 
 <!-- TOP BAR -->
@@ -100,9 +101,13 @@
     </button>
     <div style="width:1px;height:28px;background:var(--border);margin:0 4px;flex-shrink:0;"></div>
     <!-- Panel buttons right -->
-    <button class="tb-panel-btn" id="tbTools" data-tip="أدوات" data-sheet="tools">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    <button class="tb-panel-btn" id="tbBg" data-tip="أدوات" data-sheet="bg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <span>أدوات</span>
+    </button>
+    <button style="display:none;" class="tb-panel-btn" id="tbTools" data-tip="اعدادات" data-sheet="tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      <span>اعدادات</span>
     </button>
     <button class="tb-panel-btn" id="tbGrid" data-tip="الشبكة" data-sheet="grid">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -111,10 +116,6 @@
     <button class="tb-panel-btn" id="tbLetters" data-tip="الحروف" data-sheet="letters">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M6 20V4l6 8 6-8v16"/></svg>
       <span>حروف</span>
-    </button>
-    <button class="tb-panel-btn" id="tbBg" data-tip="الخلفية" data-sheet="bg">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <span>خلفية</span>
     </button>
   </div>
   <!-- Row 2: Action buttons -->
@@ -147,13 +148,16 @@
 <div id="sheetOverlay">
   <div id="bottomSheet" dir="rtl">
     <div class="bs-handle"></div>
-    <div style="display:flex;align-items:center;padding:8px 16px 0;">
+    <div style="display:none;align-items:center;padding:8px 16px 0;">
       <div class="bs-tabs" id="bsTabs" style="flex:1;padding:0;">
         <div class="bs-tab active" data-sheet="tools">أدوات</div>
         <div class="bs-tab" data-sheet="grid">الشبكة</div>
         <div class="bs-tab" data-sheet="letters">الحروف</div>
         <div class="bs-tab" data-sheet="bg">الخلفية</div>
         <div class="bs-tab" data-sheet="about">المطور</div>
+        <div class="bs-tab" data-sheet="privacy">الخصوصية</div>
+        <div class="bs-tab" data-sheet="terms">الشروط</div>
+        <div class="bs-tab" data-sheet="faq">الأسئلة</div>
       </div>
       <button class="bs-close" id="bsClose">✕</button>
     </div>
@@ -193,6 +197,9 @@
       <button class="tool-btn" data-tool="fill" data-tip="ملء (F)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M19 11L9 1 3 7l10 10"/><path d="M9.5 21.5a2.5 2.5 0 0 1-5 0c0-1.38 2.5-5 2.5-5s2.5 3.62 2.5 5z"/></svg>
       </button>
+      <button class="tool-btn" data-tool="brush" data-tip="قلم متواصل (W)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1 1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
+      </button>
       <button class="tool-btn" data-tool="pan" data-tip="تحريك (H)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
       </button>
@@ -231,55 +238,40 @@
         <button class="tool-btn" id="bgScaleDown" data-tip="تصغير الخلفية">−</button>
         <button class="tool-btn" id="bgScaleUp" data-tip="تكبير الخلفية">+</button>
       </div>
+      <div id="brushModePanel" style="display:none;flex-direction:column;align-items:center;gap:4px;">
+        <div style="width:22px;height:1px;background:rgba(255,255,255,0.13);margin:3px 0;"></div>
+        <button class="tool-btn brush-mode-btn active" data-bmode="1" data-tip="خلايا + وصلات مباشرة">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="currentColor">
+            <rect x="7" y="0" width="6" height="6" rx="1.2"/>
+            <rect x="8.5" y="6" width="3" height="8"/>
+            <rect x="7" y="14" width="6" height="6" rx="1.2"/>
+          </svg>
+        </button>
+        <button class="tool-btn brush-mode-btn" data-bmode="2" data-tip="وصلات مستقيمة فقط (بدون خلايا)">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="currentColor">
+            <rect x="8.5" y="0" width="3" height="20"/>
+          </svg>
+        </button>
+        <button class="tool-btn brush-mode-btn" data-bmode="3" data-tip="ملء كامل (خلايا + كل الفراغات المحيطة)">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="currentColor">
+            <rect x="5" y="5" width="10" height="10" rx="1.5"/>
+            <rect x="8.5" y="0" width="3" height="5"/>
+            <rect x="8.5" y="15" width="3" height="5"/>
+            <rect x="0" y="8.5" width="5" height="3"/>
+            <rect x="15" y="8.5" width="5" height="3"/>
+            <rect x="0" y="0" width="4" height="4" rx="1"/>
+            <rect x="16" y="0" width="4" height="4" rx="1"/>
+            <rect x="0" y="16" width="4" height="4" rx="1"/>
+            <rect x="16" y="16" width="4" height="4" rx="1"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Right panel REMOVED — content moved to bottom sheet via JS -->
   <!-- Hidden container holding all tab pane HTML -->
   <div id="tabPanesStore" style="display:none">
-
-    <!-- TOOLS -->
-    <div id="tab-tools" class="tab-pane">
-      <div class="sec">لون الرسم</div>
-      <div class="ctrl-row">
-        <div class="color-btn"><input type="color" id="fillColor" value="#F5A623"/></div>
-        <span class="ctrl-label">لون الحشو</span>
-      </div>
-      <div class="ctrl-row">
-        <div class="color-btn"><input type="color" id="bgColor" value="#0D1017"/></div>
-        <span class="ctrl-label">لون الخلايا الفارغة</span>
-      </div>
-      <div class="sec" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;">
-        <span>ألوان سريعة</span>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <button class="lib-icon-btn" id="btnAddSwatch" title="إضافة لون جديد" style="width:22px;height:22px;font-size:14px;padding:0;">+</button>
-          <input type="color" id="newSwatchColor" style="opacity:0;width:0;height:0;position:absolute;pointer-events:none;"/>
-        </div>
-      </div>
-      <div class="swatches" id="swatchesContainer">
-        <div class="swatch selected" style="background:#7C3AED" data-color="#7C3AED"></div>
-        <div class="swatch" style="background:#A855F7" data-color="#A855F7"></div>
-        <div class="swatch" style="background:#EF4444" data-color="#EF4444"></div>
-        <div class="swatch" style="background:#22C55E" data-color="#22C55E"></div>
-        <div class="swatch" style="background:#3B82F6" data-color="#3B82F6"></div>
-        <div class="swatch" style="background:#EC4899" data-color="#EC4899"></div>
-        <div class="swatch" style="background:#14B8A6" data-color="#14B8A6"></div>
-        <div class="swatch" style="background:#F5A623" data-color="#F5A623"></div>
-        <div class="swatch" style="background:#FFFFFF" data-color="#FFFFFF"></div>
-        <div class="swatch" style="background:#111827;border:1px solid #333" data-color="#111827"></div>
-      </div>
-      <div class="sec" style="margin-top:8px;">تصدير</div>
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        <button class="s-btn accent full" id="exportPNG">تصدير PNG نظيف</button>
-        <button class="s-btn full" id="exportWithBg">تصدير مع خلفية</button>
-      </div>
-      <div class="sec" style="margin-top:8px;">خلفية اللوحة</div>
-      <div class="btn-group">
-        <button class="s-btn" id="canvasDark">داكنة</button>
-        <button class="s-btn" id="canvasLight">فاتحة</button>
-        <div class="color-btn" style="width:30px;height:30px;"><input type="color" id="canvasBgColor" value="#0A0C10"/></div>
-      </div>
-    </div>
 
     <!-- GRID -->
     <div id="tab-grid" class="tab-pane">
@@ -304,6 +296,12 @@
       <div class="ctrl-row"><input type="range" id="gapSizeR" min="0" max="30" value="15"/><span class="ctrl-val" id="gapSizeVal">15</span></div>
       <div class="sec">استدارة الأركان</div>
       <div class="ctrl-row"><input type="range" id="cellRadR" min="0" max="20" value="5"/><span class="ctrl-val" id="cellRadVal">5</span></div>
+       <div class="sec" style="margin-top:8px;">خلفية اللوحة</div>
+      <div class="ctrl-row">
+        <button data-tip="لون لوح داكن" class="s-btn" id="canvasDark">داكنة</button>
+        <button data-tip="لون لوح فاتح" class="s-btn" id="canvasLight">فاتحة</button>
+        <div class="color-btn" style="width:30px;height:30px;"><input type="color" id="canvasBgColor" value="#0A0C10"/></div>
+      </div>
       <div class="sec" style="margin-top:8px;">خطوط المحاور</div>
       <div class="ctrl-row"><input type="checkbox" id="showAxis" checked style="width:15px;height:15px;"/><span class="ctrl-label">إظهار خطوط المحاور</span></div>
       <div class="ctrl-row">
@@ -319,12 +317,12 @@
 
     <!-- LETTERS -->
     <div id="tab-letters" class="tab-pane">
-      <div id="libHeader">
+      <div id="libHeader" style="padding-top: 20px;">
         <input type="text" id="libSearch" placeholder="بحث..."/>
-        <button class="lib-icon-btn" id="btnAddLetter" title="حرف جديد">+</button>
-        <button class="lib-icon-btn" id="btnExportLib" title="تصدير JSON">↑</button>
-        <button class="lib-icon-btn" id="btnImportLib" title="استيراد JSON">↓</button>
-        <button class="lib-icon-btn" id="btnResetLib" title="إعادة للافتراضي" style="color:#ef4444;">↺</button>
+        <button class="lib-icon-btn" id="btnAddLetter" data-tip="حرف جديد">+</button>
+        <button class="lib-icon-btn" id="btnExportLib" data-tip="تصدير JSON">↑</button>
+        <button class="lib-icon-btn" id="btnImportLib" data-tip="استيراد JSON">↓</button>
+        <button class="lib-icon-btn" id="btnResetLib" data-tip="إعادة للافتراضي" style="color:#ef4444;">↺</button>
         <input type="file" id="importLibFile" accept=".json" style="display:none"/>
       </div>
       <div id="letterLibrary"></div>
@@ -339,7 +337,46 @@
     <!-- BACKGROUND -->
     <div id="tab-bg" class="tab-pane">
 
+         <!-- TOOLS -->
+    <div id="tab-tools-in" class="tab-pane-in">
+      <div class="sec" style="margin-top:25px;margin-bottom:15px;font-size:13px;">الوان الرسم</div>
+      <div class="ctrl-row">
+        <div class="color-btn"><input type="color" id="fillColor" value="#F5A623"/></div>
+        <span class="ctrl-label">لون الحشو</span>
+      </div>
+      <div class="ctrl-row">
+        <div class="color-btn"><input type="color" id="bgColor" value="#0D1017"/></div>
+        <span class="ctrl-label">لون الخلايا الفارغة</span>
+      </div>
+      <div class="sec" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;">
+        <span>ألوان سريعة</span>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <button class="lib-icon-btn" id="btnAddSwatch" data-tip="إضافة لون جديد" style="width:22px;height:22px;font-size:14px;padding:0;">+</button>
+          <input type="color" id="newSwatchColor" style="opacity:0;width:0;height:0;position:absolute;pointer-events:none;"/>
+        </div>
+      </div>
+      <div class="swatches" id="swatchesContainer">
+        <div class="swatch selected" style="background:#7C3AED" data-color="#7C3AED"></div>
+        <div class="swatch" style="background:#A855F7" data-color="#A855F7"></div>
+        <div class="swatch" style="background:#EF4444" data-color="#EF4444"></div>
+        <div class="swatch" style="background:#22C55E" data-color="#22C55E"></div>
+        <div class="swatch" style="background:#3B82F6" data-color="#3B82F6"></div>
+        <div class="swatch" style="background:#EC4899" data-color="#EC4899"></div>
+        <div class="swatch" style="background:#14B8A6" data-color="#14B8A6"></div>
+        <div class="swatch" style="background:#F5A623" data-color="#F5A623"></div>
+        <div class="swatch" style="background:#FFFFFF" data-color="#FFFFFF"></div>
+        <div class="swatch" style="background:#111827;border:1px solid #333" data-color="#111827"></div>
+      </div>
+    </div>
+
+      <div class="sec" style="margin-top:25px;margin-bottom:15px;font-size:13px;">تصدير</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <button class="s-btn accent full" id="exportPNG">تصدير PNG نظيف</button>
+        <button class="s-btn full" id="exportWithBg">تصدير مع خلفية</button>
+      </div>
+
       <!-- upload zone -->
+     <div class="sec" style="margin-top:25px;font-size:13px;">اضافة صورة كخلفية رسم</div>
       <label class="upload-zone" for="bgFileInput" id="bgUploadZone">
         <div style="margin-bottom:5px;">
           <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.0" id="Layer_1" x="0px" y="0px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve" preserveAspectRatio="xMidYMid meet" style="width: 128px; height: 128px; transform-origin: 50% 50%; transform: scaleX(1) scaleY(1) rotate(0deg);"><path fill="#8CBCD6" d="M40,41H8c-2.2,0-4-1.8-4-4V11c0-2.2,1.8-4,4-4h32c2.2,0,4,1.8,4,4v26C44,39.2,42.2,41,40,41z"/><circle fill="#B3DDF5" cx="35" cy="16" r="3"/><polygon fill="#9AC9E3" points="20,16 9,32 31,32 "/><polygon fill="#B3DDF5" points="31,22 23,32 39,32 "/><circle fill="#F5A623" cx="38" cy="38" r="10"/><g><rect x="36" y="32" fill="#FFFFFF" width="4" height="12"/><rect x="32" y="36" fill="#FFFFFF" width="12" height="4"/></g></svg>
@@ -381,6 +418,7 @@
  </div>
 
     </div>
+    
     <!-- ABOUT -->
     <div id="tab-about" class="tab-pane">
       
@@ -415,6 +453,13 @@
         </div>
       </div>
       
+      <!-- Legal & FAQ buttons -->
+      <div style="display:flex;gap:8px;margin:8px 4px 0;flex-wrap:wrap;">
+        <button class="s-btn" onclick="openSheet('privacy')" style="flex:1;font-size:12px;min-width:80px;">🔒 الخصوصية</button>
+        <button class="s-btn" onclick="openSheet('terms')"   style="flex:1;font-size:12px;min-width:80px;">📋 الشروط</button>
+        <button class="s-btn" onclick="openSheet('faq')"     style="flex:1;font-size:12px;min-width:80px;">❓ الأسئلة</button>
+      </div>
+
       <!-- Developer -->
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin:8px 4px 0;">
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
@@ -446,6 +491,62 @@
     
      </div>
 
+
+    <div id="tab-privacy" class="tab-pane">
+      <div style="padding:16px 4px;">
+        <div style="font-size:16px;font-weight:800;margin-bottom:12px;">🔒 سياسة الخصوصية</div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:2;">
+          <b style="color:var(--text);">جمع البيانات</b><br/>
+          لا يجمع kufiMaker أي بيانات شخصية. جميع بياناتك تُخزَّن محلياً على جهازك فقط.<br/><br/>
+          <b style="color:var(--text);">ملفات تعريف الارتباط</b><br/>
+          لا يستخدم التطبيق أي Cookies.<br/><br/>
+          <b style="color:var(--text);">التخزين المحلي</b><br/>
+          يستخدم localStorage وIndexedDB لحفظ جلستك — يمكن مسحها عبر إعادة التهيئة.<br/><br/>
+          <!-- أضف ملاحظاتك هنا -->
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-terms" class="tab-pane">
+      <div style="padding:16px 4px;">
+        <div style="font-size:16px;font-weight:800;margin-bottom:12px;">📋 الشروط والأحكام</div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:2;">
+          <b style="color:var(--text);">الاستخدام</b><br/>
+          يُتاح للاستخدام الشخصي والتجاري مجاناً بدون قيود.<br/><br/>
+          <b style="color:var(--text);">الملكية الفكرية</b><br/>
+          الكود مرخَّص بـ MIT. الرسومات التي تنشئها ملكك الكامل.<br/><br/>
+          <b style="color:var(--text);">إخلاء المسؤولية</b><br/>
+          يُقدَّم التطبيق كما هو. المطور غير مسؤول عن أي خسارة في البيانات.<br/><br/>
+          <!-- أضف ملاحظاتك هنا -->
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-faq" class="tab-pane">
+      <div style="padding:16px 4px;">
+        <div style="font-size:16px;font-weight:800;margin-bottom:12px;">❓ الأسئلة الشائعة</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <details style="background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;">
+            <summary style="padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer;list-style:none;">كيف أحفظ عملي؟</summary>
+            <div style="padding:10px 16px 14px;font-size:12px;color:var(--muted);line-height:1.9;border-top:1px solid var(--border);">
+              يتم الحفظ التلقائي باستمرار. يمكنك تصدير عملك كـ PNG أو JSON عبر أزرار الحفظ.<!-- أضف هنا -->
+            </div>
+          </details>
+          <details style="background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;">
+            <summary style="padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer;list-style:none;">هل يعمل بدون إنترنت؟</summary>
+            <div style="padding:10px 16px 14px;font-size:12px;color:var(--muted);line-height:1.9;border-top:1px solid var(--border);">
+              نعم! بعد الزيارة الأولى يعمل كاملاً offline. يمكن تثبيته كتطبيق عبر زر التثبيت.<!-- أضف هنا -->
+            </div>
+          </details>
+          <details style="background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;">
+            <summary style="padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer;list-style:none;">ماذا تعني إعادة التهيئة؟</summary>
+            <div style="padding:10px 16px 14px;font-size:12px;color:var(--muted);line-height:1.9;border-top:1px solid var(--border);">
+              تمسح جميع البيانات المحلية وتُعيد التطبيق لحالته الأولى. استخدمها عند الضرورة فقط.<!-- أضف هنا -->
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
   </div><!-- /tabPanesStore -->
 
 </div><!-- /main -->
@@ -510,7 +611,7 @@
   </div>
 </div>
 
-<script src="app.js" defer></script>
+<script src="fixed_app.js" defer></script>
 
 </body>
 </html>
