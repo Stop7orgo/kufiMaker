@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   kufiMaker — v1
+   kufiMaker — v8
    ✓ Blend mode FIXED (bgLayer is sibling of gc, not child)
    ✓ Gap H/V/Dot cells fully interactive like cells
    ✓ Smart corner radius (connected shapes look joined)
@@ -87,22 +87,81 @@ window.addEventListener('resize',()=>{
   clearTimeout(resizeTimer);
   resizeTimer=setTimeout(()=>{if(!grid.flat().some(v=>v))initGrid();},300);
 });
+// Fix landscape scroll: force viewport reflow on orientation change
 window.addEventListener('orientationchange',()=>{
   setTimeout(()=>{
+    // Force viewport to recalculate its scroll dimensions
     vp.style.display='none';
-    vp.offsetHeight;
+    vp.offsetHeight; // trigger reflow
     vp.style.display='';
   }, 300);
 });
 
 function cellEl(x,y){return gc.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`)||null;}
 
+/* ══════════════════════════════════════════════
+   SMART RADIUS — final correct model
+   
+   Grid layout (T = cellSz+gapSz):
+     cell(x,y) │ gapV(x,y) │ cell(x+1,y)
+     ──────────┼───────────┼────────────
+     gapH(x,y) │ gapD(x,y) │ gapH(x+1,y)
+     ──────────┼────────────┼───────────
+     cell(x,y+1)│gapV(x,y+1)│cell(x+1,y+1)
+
+   RULE: A corner of any element is SQUARE when the corner "slot" of the
+   diagonal neighbour (gapD) is filled, OR when BOTH arms extending from
+   that corner in the two orthogonal directions are occupied.
+
+   For cell(x,y) BR corner:
+     Square if:  gapD(x,y) filled
+              OR (right-arm: gapV(x,y) or cell(x+1,y)) AND (below-arm: gapH(x,y) or cell(x,y+1))
+              OR right-arm filled alone  [shares full right edge]
+              OR below-arm filled alone  [shares full bottom edge]
+
+   Wait — simpler: corner is square if EITHER arm is filled (since sharing an edge
+   means the corner point is shared). So:
+     BR square if: (gapV(x,y) or cell(x+1,y)) OR (gapH(x,y) or cell(x,y+1)) OR gapD(x,y)
+
+   This is correct. The look-through-diagonal extra conditions I had before
+   were for cases like: gapV to right is filled AND gapH below-right is filled.
+   But gapH(x+1,y) is not adjacent to cell(x,y) at all — it's too far.
+   So the extra conditions were WRONG and were causing phantom squaring.
+
+   FINAL SIMPLE CORRECT FORMULA:
+   cell(x,y) corner is square iff any element that DIRECTLY SHARES THAT CORNER POINT is filled.
+   
+   Directly shares corner point means: shares an edge (→ all edge corners) or corner only.
+   
+   cell BR shares its BR corner with:
+     - gapV(x,y)   [shares right edge → shares BR point]
+     - cell(x+1,y) [separated by gapV → does NOT directly share corner]
+     - gapH(x,y)   [shares bottom edge → shares BR point]  
+     - cell(x,y+1) [separated by gapH → does NOT directly share corner]
+     - gapD(x,y)   [shares only the corner point diagonally]
+
+   Wait, but if there's NO gapV between cell(x,y) and cell(x+1,y), they ARE adjacent?
+   NO — in our grid there is ALWAYS a gapV slot between horizontally adjacent cells,
+   and ALWAYS a gapH slot between vertically adjacent cells.
+   The gap slots exist even when empty (value=0).
+
+   So cell(x,y) NEVER directly touches cell(x+1,y) — there is always a gapV slot between them.
+   cell(x,y) directly touches: gapV(x,y) on the right, gapH(x,y) below,
+                                gapV(x-1,y) on the left, gapH(x,y-1) above,
+                                gapD(x-1,y-1) at TL corner, gapD(x,y-1) at TR,
+                                gapD(x-1,y) at BL, gapD(x,y) at BR.
+   
+   That's it. Cells never directly touch other cells.
+
+   CORRECT FINAL FORMULAS:
+══════════════════════════════════════════════ */
 function isFC(x,y){return x>=0&&x<cols&&y>=0&&y<rows&&grid[y][x]===1;}
 function isGH(gx,gy){return gy>=0&&gy<rows-1&&gx>=0&&gx<cols&&gapH[gy][gx]===1;}
 function isGV(gx,gy){return gy>=0&&gy<rows&&gx>=0&&gx<cols-1&&gapV[gy][gx]===1;}
 function isGD(gx,gy){return gy>=0&&gy<rows-1&&gx>=0&&gx<cols-1&&gapD[gy][gx]===1;}
 function rc(b){return(b||cellRad===0)?0:cellRad;}
 
+/* CELL(x,y): touches only its 4 gap-edge neighbours and 4 gapD corner neighbours */
 function computeCellRadius(x,y){
   if(cellRad===0) return '0';
   const tl=rc(isGV(x-1,y)||isGH(x,y-1)||isGD(x-1,y-1));
@@ -111,6 +170,17 @@ function computeCellRadius(x,y){
   const br=rc(isGV(x,  y)||isGH(x,y  )||isGD(x,  y  ));
   return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
+
+/* GAPH(gx,gy): bar between row gy (above) and row gy+1 (below)
+   Direct neighbours: cell(gx,gy)[above edge], cell(gx,gy+1)[below edge],
+                      gapV(gx-1,gy)[left-top edge], gapV(gx-1,gy+1)[left-bottom edge],
+                      gapV(gx,gy)[right-top edge],  gapV(gx,gy+1)[right-bottom edge],
+                      gapD(gx-1,gy)[left corner], gapD(gx,gy)[right corner]
+   TL corner: shared with cell(gx,gy)[above] and gapV(gx-1,gy)[left-top] and gapD(gx-1,gy)
+   TR corner: shared with cell(gx,gy) and gapV(gx,gy) and gapD(gx,gy)
+   BL corner: shared with cell(gx,gy+1) and gapV(gx-1,gy+1) and gapD(gx-1,gy)
+   BR corner: shared with cell(gx,gy+1) and gapV(gx,gy+1) and gapD(gx,gy)
+*/
 function computeGHRadius(gx,gy){
   if(cellRad===0) return '0';
   const tl=rc(isFC(gx,gy)  ||isGV(gx-1,gy)  ||isGD(gx-1,gy));
@@ -119,6 +189,13 @@ function computeGHRadius(gx,gy){
   const br=rc(isFC(gx,gy+1)||isGV(gx,  gy+1)||isGD(gx,  gy));
   return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
+
+/* GAPV(gx,gy): bar between col gx (left) and col gx+1 (right)
+   TL corner: shared with cell(gx,gy)[left] and gapH(gx,gy-1)[top-left] and gapD(gx,gy-1)
+   TR corner: shared with cell(gx+1,gy)[right] and gapH(gx+1,gy-1)[top-right] and gapD(gx,gy-1)
+   BL corner: shared with cell(gx,gy)[left] and gapH(gx,gy)[bottom-left] and gapD(gx,gy)
+   BR corner: shared with cell(gx+1,gy)[right] and gapH(gx+1,gy)[bottom-right] and gapD(gx,gy)
+*/
 function computeGVRadius(gx,gy){
   if(cellRad===0) return '0';
   const tl=rc(isFC(gx,  gy)||isGH(gx,  gy-1)||isGD(gx,gy-1));
@@ -127,6 +204,8 @@ function computeGVRadius(gx,gy){
   const br=rc(isFC(gx+1,gy)||isGH(gx+1,gy)  ||isGD(gx,gy));
   return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
+
+/* GAPD(gx,gy): corner dot — directly touches 1 cell + 1 gapH + 1 gapV at each corner */
 function computeGDRadius(gx,gy){
   if(cellRad===0) return '0';
   const maxR = Math.min(cellRad, Math.floor(gapSz/2));
@@ -155,6 +234,7 @@ function renderGapElements(){
   document.querySelectorAll('.gap-h,.gap-v,.gap-d').forEach(e=>e.remove());
   const total=cellSz+gapSz, pad=20;
 
+  // Horizontal gaps (between rows gy and gy+1)
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols;gx++){
     const v=gapH[gy][gx];
     const el=document.createElement('div');
@@ -165,6 +245,7 @@ function renderGapElements(){
     gc.appendChild(el);
   }
 
+  // Vertical gaps (between cols gx and gx+1)
   for(let gy=0;gy<rows;gy++) for(let gx=0;gx<cols-1;gx++){
     const v=gapV[gy][gx];
     const el=document.createElement('div');
@@ -175,6 +256,7 @@ function renderGapElements(){
     gc.appendChild(el);
   }
 
+  // Corner dots at intersections
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols-1;gx++){
     const v=gapD[gy][gx];
     const el=document.createElement('div');
@@ -271,6 +353,7 @@ function applyTool(x,y,fresh=false){
 function applyGapTool(gt,gx,gy,toggle=false){
   const erase = tool==='erase';
   if(gt==='h'){
+    // toggle: if already filled AND draw tool → erase it; else fill
     const cur=gapH[gy][gx];
     const newVal = erase ? 0 : (toggle && cur===1) ? 0 : 1;
     gapH[gy][gx]=newVal;
@@ -314,448 +397,84 @@ function floodFill(sx,sy){
   updateStatus();
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   SELECTION SYSTEM — SEL
-══════════════════════════════════════════════════════════════════ */
-const SEL = (() => {
-  const PAD = 20;
-  let phase = 'idle';
-  let x1=0,y1=0,x2=0,y2=0;
-  let frameEl = null;
-  let floatEl = null;
-  let data    = null;
-  let hdrag   = null;
-  let fdrag   = null;
+/* ══════════ SELECTION TOOL STATE ══════════ */
+let selState='idle'; // idle | drawing | selected | moving
+let selStart={x:-1,y:-1}, selEnd={x:-1,y:-1};
+let selMoveFrom={x:0,y:0};
+let selOverlay=null;
 
-  function toCell(cx,cy){
-    const T=cellSz+gapSz, r=gc.getBoundingClientRect();
-    return {
-      x: Math.max(0,Math.min(cols-1, Math.round(((cx-r.left)/zoom-PAD)/T - 0.5))),
-      y: Math.max(0,Math.min(rows-1, Math.round(((cy-r.top )/zoom-PAD)/T - 0.5)))
-    };
+function _selRect(){
+  const x1=Math.min(selStart.x,selEnd.x),y1=Math.min(selStart.y,selEnd.y);
+  const x2=Math.max(selStart.x,selEnd.x),y2=Math.max(selStart.y,selEnd.y);
+  return{x1,y1,x2,y2};
+}
+function clearSelection(){
+  selStart={x:-1,y:-1};selEnd={x:-1,y:-1};selState='idle';
+  if(selOverlay){selOverlay.remove();selOverlay=null;}
+  const sb=$id('selActionBar');if(sb)sb.style.display='none';
+}
+function drawSelOverlay(){
+  if(selOverlay){selOverlay.remove();selOverlay=null;}
+  if(selStart.x<0)return;
+  const r=_selRect(), total=cellSz+gapSz;
+  const gcR=gc.getBoundingClientRect(),vpR=vp.getBoundingClientRect();
+  const ox=gcR.left-vpR.left+vp.scrollLeft+20*zoom;
+  const oy=gcR.top-vpR.top+vp.scrollTop+20*zoom;
+  selOverlay=document.createElement('div');
+  selOverlay.id='selOverlay';
+  selOverlay.style.cssText=`position:absolute;pointer-events:none;z-index:15;box-sizing:border-box;
+    border:2px dashed rgba(66,165,245,0.9);background:rgba(66,165,245,0.08);
+    left:${ox+r.x1*total*zoom}px;top:${oy+r.y1*total*zoom}px;
+    width:${(r.x2-r.x1+1)*total*zoom}px;height:${(r.y2-r.y1+1)*total*zoom}px;`;
+  ['tl','tr','bl','br'].forEach(p=>{
+    const h=document.createElement('div');
+    h.style.cssText=`position:absolute;width:10px;height:10px;border-radius:50%;
+      background:#42A5F5;border:2px solid #fff;pointer-events:none;
+      ${p.includes('t')?'top:-5px;':'bottom:-5px;'}${p.includes('l')?'left:-5px;':'right:-5px;'}`;
+    selOverlay.appendChild(h);
+  });
+  vp.appendChild(selOverlay);
+}
+function moveSelection(dx,dy){
+  if(selStart.x<0)return;
+  const r=_selRect();
+  if(r.x1+dx<0||r.y1+dy<0||r.x2+dx>=cols||r.y2+dy>=rows)return;
+  saveState();
+  const snap={cells:[],gH:[],gV:[],gD:[]};
+  for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
+    snap.cells.push({x,y,v:grid[y][x],c:cellColors[`${x},${y}`]});
+    if(x<cols-1)snap.gV.push({x,y,v:gapV[y]?.[x]||0,c:gapVColors[`${x},${y}`]});
+    if(y<rows-1)snap.gH.push({x,y,v:gapH[y]?.[x]||0,c:gapHColors[`${x},${y}`]});
+    if(x<cols-1&&y<rows-1)snap.gD.push({x,y,v:gapD[y]?.[x]||0,c:gapDColors[`${x},${y}`]});
   }
-  function norm(){ return { x1:Math.min(x1,x2),y1:Math.min(y1,y2),x2:Math.max(x1,x2),y2:Math.max(y1,y2) }; }
-
-  function buildFrame(){
-    const {x1:nx1,y1:ny1,x2:nx2,y2:ny2}=norm();
-    const T=cellSz+gapSz;
-    const L=PAD+nx1*T, To=PAD+ny1*T;
-    const W=(nx2-nx1+1.2)*T, H=(ny2-ny1+1.2)*T;
-
-    if(!frameEl){
-      frameEl=document.createElement('div');
-      frameEl.className='sel-frame';
-
-      const bar=document.createElement('div');
-      bar.className='sel-ctrl-bar';
-      const lbl=document.createElement('span');
-      lbl.className='sel-ctrl-label'; lbl.textContent='تأكيد';
-      const commitBtn=document.createElement('button');
-      commitBtn.className='sel-ctrl-btn commit'; commitBtn.title='تأكيد (Enter)'; commitBtn.innerHTML='✓';
-      commitBtn.addEventListener('pointerdown',e=>e.stopPropagation());
-      commitBtn.addEventListener('click',e=>{e.stopPropagation(); commitFrame();});
-      const cancelBtn=document.createElement('button');
-      cancelBtn.className='sel-ctrl-btn cancel'; cancelBtn.title='إلغاء (Esc)'; cancelBtn.innerHTML='✕';
-      cancelBtn.addEventListener('pointerdown',e=>e.stopPropagation());
-      cancelBtn.addEventListener('click',e=>{e.stopPropagation(); reset();});
-      bar.appendChild(lbl); bar.appendChild(commitBtn); bar.appendChild(cancelBtn);
-      frameEl.appendChild(bar);
-
-      const dim=document.createElement('div');
-      dim.className='sel-dim-badge'; dim.id='_selDim';
-      frameEl.appendChild(dim);
-
-      ['tl','tm','tr','ml','mr','bl','bm','br'].forEach(h=>{
-        const hEl=document.createElement('div');
-        hEl.className='sel-handle'; hEl.dataset.h=h;
-        hEl.addEventListener('pointerdown',ev=>{
-          ev.stopPropagation(); ev.preventDefault();
-          hEl.setPointerCapture(ev.pointerId);
-          const n=norm();
-          hdrag={h, ox1:n.x1,oy1:n.y1,ox2:n.x2,oy2:n.y2};
-        });
-        hEl.addEventListener('pointermove',ev=>{
-          if(!hdrag||hdrag.h!==h) return;
-          ev.stopPropagation();
-          const c=toCell(ev.clientX,ev.clientY);
-          const {h:hh,ox1,oy1,ox2,oy2}=hdrag;
-          if(hh.includes('l')) x1=Math.min(c.x,ox2);
-          if(hh.includes('r')) x2=Math.max(c.x,ox1);
-          if(hh.includes('t')) y1=Math.min(c.y,oy2);
-          if(hh.includes('b')) y2=Math.max(c.y,oy1);
-          if(hh==='ml'||hh==='mr'){y1=oy1;y2=oy2;}
-          if(hh==='tm'||hh==='bm'){x1=ox1;x2=ox2;}
-          updateFrame();
-        });
-        hEl.addEventListener('pointerup',ev=>{
-          try{hEl.releasePointerCapture(ev.pointerId);}catch(_){}
-          hdrag=null;
-        });
-        frameEl.appendChild(hEl);
-      });
-
-      frameEl.addEventListener('pointerdown',ev=>{
-        if(ev.target.classList.contains('sel-handle')||
-           ev.target.closest('.sel-ctrl-bar')) return;
-        ev.stopPropagation(); ev.preventDefault();
-        frameEl.setPointerCapture(ev.pointerId);
-        const n=norm();
-        fdrag={sx:ev.clientX,sy:ev.clientY,ox1:n.x1,oy1:n.y1,ox2:n.x2,oy2:n.y2};
-      });
-      frameEl.addEventListener('pointermove',ev=>{
-        if(!fdrag) return; ev.stopPropagation();
-        const T=cellSz+gapSz;
-        const ddx=Math.round((ev.clientX-fdrag.sx)/(T*zoom));
-        const ddy=Math.round((ev.clientY-fdrag.sy)/(T*zoom));
-        const w=fdrag.ox2-fdrag.ox1, h2=fdrag.oy2-fdrag.oy1;
-        let nx1=Math.max(0,Math.min(cols-1-w, fdrag.ox1+ddx));
-        let ny1=Math.max(0,Math.min(rows-1-h2,fdrag.oy1+ddy));
-        x1=nx1;y1=ny1;x2=nx1+w;y2=ny1+h2;
-        updateFrame();
-      });
-      frameEl.addEventListener('pointerup',ev=>{
-        try{frameEl.releasePointerCapture(ev.pointerId);}catch(_){} fdrag=null;
-      });
-      frameEl.addEventListener('pointercancel',ev=>{fdrag=null;});
-
-      gc.appendChild(frameEl);
-    }
-
-    frameEl.style.left=L+'px'; frameEl.style.top=To+'px';
-    frameEl.style.width=W+'px'; frameEl.style.height=H+'px';
-
-    const d=$id('_selDim');
-    if(d) d.textContent=`${nx2-nx1+1} × ${ny2-ny1+1}`;
+  for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
+    grid[y][x]=0;delete cellColors[`${x},${y}`];
+    if(gapV[y]&&x<cols-1){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
+    if(y<rows-1&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
+    if(y<rows-1&&x<cols-1&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
   }
-
-  function updateFrame(){ if(frameEl) buildFrame(); }
-
-  function commitFrame(){
-    const {x1:nx1,y1:ny1,x2:nx2,y2:ny2}=norm();
-
-    const cells=[],gH=[],gV=[],gD=[];
-    for(let y=ny1;y<=ny2;y++) for(let x=nx1;x<=nx2;x++){
-      const lx=x-nx1,ly=y-ny1;
-      if(grid[y]?.[x]) cells.push({lx,ly,c:cellColors[`${x},${y}`]||drawColor});
-      if(x<nx2&&gapV[y]?.[x]) gV.push({lx,ly,c:gapVColors[`${x},${y}`]||drawColor});
-      if(y<ny2&&gapH[y]?.[x]) gH.push({lx,ly,c:gapHColors[`${x},${y}`]||drawColor});
-      if(x<nx2&&y<ny2&&gapD[y]?.[x]) gD.push({lx,ly,c:gapDColors[`${x},${y}`]||drawColor});
-    }
-
-    if(!cells.length&&!gH.length&&!gV.length&&!gD.length){ reset(); return; }
-
-    saveState();
-
-    for(let y=ny1;y<=ny2;y++) for(let x=nx1;x<=nx2;x++){
-      grid[y][x]=0; delete cellColors[`${x},${y}`];
-      const el=cellEl(x,y);
-      if(el){el.classList.remove('filled');el.style.background='';el.style.borderRadius=`${cellRad}px`;}
-      if(x<nx2&&gapV[y]){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
-      if(y<ny2&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
-      if(x<nx2&&y<ny2&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
-    }
-    renderGapElements(); refreshAllRadius();
-
-    data={cells,gH,gV,gD, ox:nx1,oy:ny1, w:nx2-nx1+1,h:ny2-ny1+1};
-
-    if(frameEl){frameEl.remove();frameEl=null;}
-
-    stamp();
-    buildFloat();
-    phase='float';
-  }
-
-  function stamp(){
-    const b=data; if(!b) return;
-    b.cells.forEach(({lx,ly,c})=>{
-      const x=b.ox+lx,y=b.oy+ly;
-      if(x<0||x>=cols||y<0||y>=rows) return;
-      grid[y][x]=1; cellColors[`${x},${y}`]=c;
-      const el=cellEl(x,y);
-      if(el){el.classList.add('filled');el.style.background=c;}
-    });
-    b.gV.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows&&x>=0&&x<cols-1&&gapV[y]){gapV[y][x]=1;gapVColors[`${x},${y}`]=c;}});
-    b.gH.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows-1&&x>=0&&x<cols&&gapH[y]){gapH[y][x]=1;gapHColors[`${x},${y}`]=c;}});
-    b.gD.forEach(({lx,ly,c})=>{const x=b.ox+lx,y=b.oy+ly;if(y>=0&&y<rows-1&&x>=0&&x<cols-1&&gapD[y]){gapD[y][x]=1;gapDColors[`${x},${y}`]=c;}});
-    b.cells.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(x>=0&&x<cols&&y>=0&&y<rows)refreshRadiusAround(x,y);});
-    renderGapElements(); refreshAllRadius();
-  }
-  function erase(){
-    const b=data; if(!b) return;
-    b.cells.forEach(({lx,ly})=>{
-      const x=b.ox+lx,y=b.oy+ly;
-      if(x<0||x>=cols||y<0||y>=rows) return;
-      grid[y][x]=0; delete cellColors[`${x},${y}`];
-      const el=cellEl(x,y);
-      if(el){el.classList.remove('filled');el.style.background='';el.style.borderRadius=`${cellRad}px`;}
-    });
-    b.gV.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapV[y]){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}});
-    b.gH.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}});
-    b.gD.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}});
-    b.cells.forEach(({lx,ly})=>{const x=b.ox+lx,y=b.oy+ly;if(x>=0&&x<cols&&y>=0&&y<rows)refreshRadiusAround(x,y);});
-  }
-
-  function buildFloat(){
-    const b=data; if(!b) return;
-    if(floatEl){floatEl.remove();}
-
-    const div=document.createElement('div');
-    div.className='sel-float';
-    floatEl=div;
-    reposFloat();
-
-    const cnt=b.cells.length+(b.gH?.length||0)+(b.gV?.length||0);
-    const badge=document.createElement('div'); badge.className='sel-float-badge';
-    badge.textContent=`${cnt} عنصر`;
-    div.appendChild(badge);
-
-    const hint=document.createElement('div'); hint.className='sel-float-hint';
-    hint.textContent='اسحب • أسهم للنقل الدقيق';
-    div.appendChild(hint);
-
-    const cb=document.createElement('button');
-    cb.className='sel-float-commit'; cb.title='تثبيت (Enter)'; cb.innerHTML='✓';
-    cb.addEventListener('pointerdown',e=>e.stopPropagation());
-    cb.addEventListener('click',e=>{e.stopPropagation(); finalStamp();});
-    div.appendChild(cb);
-
-    const xb=document.createElement('button');
-    xb.className='sel-float-cancel'; xb.title='إلغاء (Esc)'; xb.innerHTML='✕';
-    xb.addEventListener('pointerdown',e=>e.stopPropagation());
-    xb.addEventListener('click',e=>{e.stopPropagation(); undo(); reset();});
-    div.appendChild(xb);
-
-    // ── الصورة الشبحية ──
-    const ghost = document.createElement('canvas');
-    ghost.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
-    div.appendChild(ghost);
-
-    function drawGhost(){
-      const T=cellSz+gapSz;
-      const W=b.w*T, H=b.h*T;
-      ghost.width=Math.ceil(W); ghost.height=Math.ceil(H);
-      ghost.style.width=W+'px'; ghost.style.height=H+'px';
-      const ctx=ghost.getContext('2d');
-      ctx.clearRect(0,0,ghost.width,ghost.height);
-      ctx.globalAlpha=0.60;
-      b.cells.forEach(({lx,ly,c})=>{
-        ctx.fillStyle=c||drawColor;
-        const rx=lx*T, ry=ly*T, r=Math.min(cellRad,cellSz/2);
-        ctx.beginPath();
-        if(r>0 && ctx.roundRect) ctx.roundRect(rx,ry,cellSz,cellSz,[r]);
-        else ctx.rect(rx,ry,cellSz,cellSz);
-        ctx.fill();
-      });
-      b.gV.forEach(({lx,ly,c})=>{
-        ctx.fillStyle=c||drawColor;
-        ctx.fillRect(lx*T+cellSz, ly*T, gapSz, cellSz);
-      });
-      b.gH.forEach(({lx,ly,c})=>{
-        ctx.fillStyle=c||drawColor;
-        ctx.fillRect(lx*T, ly*T+cellSz, cellSz, gapSz);
-      });
-      b.gD.forEach(({lx,ly,c})=>{
-        ctx.fillStyle=c||drawColor;
-        ctx.fillRect(lx*T+cellSz, ly*T+cellSz, gapSz, gapSz);
-      });
-    }
-    drawGhost();
-
-    let ds=null;
-    div.addEventListener('pointerdown',ev=>{
-      if(ev.target===cb||ev.target===xb) return;
-      ev.stopPropagation(); ev.preventDefault();
-      div.setPointerCapture(ev.pointerId);
-      ds={sx:ev.clientX,sy:ev.clientY,ox:b.ox,oy:b.oy,ldx:0,ldy:0};
-    });
-    div.addEventListener('pointermove',ev=>{
-      if(!ds) return; ev.stopPropagation();
-      const T=cellSz+gapSz;
-      const ddx=Math.round((ev.clientX-ds.sx)/(T*zoom));
-      const ddy=Math.round((ev.clientY-ds.sy)/(T*zoom));
-      if(ddx===ds.ldx&&ddy===ds.ldy) return;
-      const ok=b.cells.every(({lx,ly})=>{
-        const nx=ds.ox+lx+ddx,ny=ds.oy+ly+ddy;
-        return nx>=0&&nx<cols&&ny>=0&&ny<rows;
-      });
-      if(!ok) return;
-      ds.ldx=ddx; ds.ldy=ddy;
-      b.ox=ds.ox+ddx; b.oy=ds.oy+ddy;
-      reposFloat();
-    });
-    div.addEventListener('pointerup',ev=>{
-      if(!ds) return;
-      try{div.releasePointerCapture(ev.pointerId);}catch(_){}
-      const finalOx=b.ox, finalOy=b.oy;
-      b.ox=ds.ox; b.oy=ds.oy;
-      erase();
-      b.ox=finalOx; b.oy=finalOy;
-      stamp(); renderGapElements(); refreshAllRadius();
-      ds=null; reposFloat();
-    });
-    div.addEventListener('pointercancel',ev=>{
-      if(!ds) return;
-      b.ox=ds.ox; b.oy=ds.oy;
-      ds=null; reposFloat();
-    });
-
-    gc.appendChild(div);
-  }
-
-  function reposFloat(){
-    if(!floatEl||!data) return;
-    const b=data, T=cellSz+gapSz;
-    floatEl.style.left=(PAD+b.ox*T)+'px';
-    floatEl.style.top =(PAD+b.oy*T)+'px';
-    floatEl.style.width =(b.w*T)+'px';
-    floatEl.style.height=(b.h*T)+'px';
-  }
-
-  function finalStamp(){
-    if(data) stamp();
-    reset();
-    scheduleSessionSave?.();
-  }
-
-  function reset(){
-    if(frameEl){frameEl.remove();frameEl=null;}
-    if(floatEl){floatEl.remove();floatEl=null;}
-    data=null; phase='idle'; hdrag=null; fdrag=null;
-  }
-
-  function nudge(dx,dy){
-    if(phase==='define'){
-      x2=Math.max(x1,Math.min(cols-1,x2+dx));
-      y2=Math.max(y1,Math.min(rows-1,y2+dy));
-      updateFrame();
-    } else if(phase==='float'&&data){
-      const b=data;
-      const ok=b.cells.every(({lx,ly})=>{
-        const nx=b.ox+lx+dx,ny=b.oy+ly+dy;
-        return nx>=0&&nx<cols&&ny>=0&&ny<rows;
-      });
-      if(!ok) return;
-      const savedOx=b.ox, savedOy=b.oy;
-      b.ox+=dx; b.oy+=dy;
-      const nudgeX=b.ox, nudgeY=b.oy;
-      b.ox=savedOx; b.oy=savedOy;
-      erase();
-      b.ox=nudgeX; b.oy=nudgeY;
-      stamp(); renderGapElements(); refreshAllRadius(); reposFloat();
-    }
-  }
-
-  return {
-    get phase(){ return phase; },
-    reset,
-    nudge,
-    commit: commitFrame,
-    finalStamp,
-    onDown(e){
-      if(e.target.closest?.('.sel-frame,.sel-float,.sel-handle,.sel-ctrl-bar,.sel-float-commit,.sel-float-cancel')) return;
-      const cell=toCell(e.clientX,e.clientY);
-      if(phase==='float') finalStamp();
-      phase='define';
-      x1=cell.x; y1=cell.y; x2=cell.x; y2=cell.y;
-      buildFrame();
-      vp.setPointerCapture(e.pointerId);
-      e.preventDefault(); e.stopImmediatePropagation();
-    },
-    onMove(e){
-      if(phase==='define'&&!hdrag&&!fdrag){
-        const cell=toCell(e.clientX,e.clientY);
-        x2=cell.x; y2=cell.y;
-        updateFrame();
-        e.preventDefault();
-      }
-    },
-    onUp(e){
-      try{vp.releasePointerCapture(e.pointerId);}catch(_){}
-    }
-  };
-})();
+  snap.cells.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;grid[ny][nx]=v;if(v)cellColors[`${nx},${ny}`]=c||drawColor;});
+  snap.gV.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(gapV[ny]&&nx<cols-1){gapV[ny][nx]=v;if(v&&c)gapVColors[`${nx},${ny}`]=c;}});
+  snap.gH.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(ny<rows-1&&gapH[ny]){gapH[ny][nx]=v;if(v&&c)gapHColors[`${nx},${ny}`]=c;}});
+  snap.gD.forEach(({x,y,v,c})=>{const nx=x+dx,ny=y+dy;if(ny<rows-1&&nx<cols-1&&gapD[ny]){gapD[ny][nx]=v;if(v&&c)gapDColors[`${nx},${ny}`]=c;}});
+  selStart={x:selStart.x+dx,y:selStart.y+dy};
+  selEnd={x:selEnd.x+dx,y:selEnd.y+dy};
+  renderGrid();drawSelOverlay();
+}
 
 /* ══════════ POINTER EVENTS ══════════ */
-vp.addEventListener('pointerdown',e=>{
-  if(tool==='select'){ SEL.onDown(e); return; }
 
-  if(tool==='brush'){
-    if(e.target.closest?.('.block-overlay,.brush-anchor,.brush-preview')) return;
-    const cell=getCell(e); if(!cell) return;
-    if(!BRUSH.active) saveState();
-    BRUSH.clearPreview();
-    BRUSH.strokeTo(cell.x,cell.y);
-    e.preventDefault(); e.stopImmediatePropagation(); return;
-  }
-
-  if(tool==='pan'){
-    panActive=true;
-    panStart={mx:e.clientX,my:e.clientY,sx:vp.scrollLeft,sy:vp.scrollTop};
-    vp.setPointerCapture(e.pointerId); return;
-  }
-  if(e.target.closest?.('.block-overlay')) return;
-
-  const gt=e.target.dataset.gtype;
-  if(gt){
-    saveState();
-    applyGapTool(gt,+e.target.dataset.gx,+e.target.dataset.gy, false);
-    gapDrawing=true;
-    vp.setPointerCapture(e.pointerId); return;
-  }
-
-  const cell=getCell(e); if(!cell) return;
-  if(tool==='fill'){floodFill(cell.x,cell.y);return;}
-  isDrawing=true;
-  if(tool==='draw'||tool==='erase') saveState();
-  vp.setPointerCapture(e.pointerId);
-  applyTool(cell.x,cell.y,true);
-  lastX=cell.x; lastY=cell.y;
-});
-
-vp.addEventListener('pointermove',e=>{
-  if(tool==='select'){ SEL.onMove(e); return; }
-
-  if(tool==='brush'){
-    const cell=getCell(e);
-    if(cell){
-      coordsBar.textContent=`X: ${cell.x} — Y: ${cell.y}`;
-      $id('statusX').textContent=cell.x; $id('statusY').textContent=cell.y;
-      BRUSH.showPreview(cell.x,cell.y);
-    } else {
-      BRUSH.clearPreview();
-    }
-    return;
-  }
-
-  if(panActive){
-    vp.scrollLeft=panStart.sx-(e.clientX-panStart.mx);
-    vp.scrollTop=panStart.sy-(e.clientY-panStart.my); return;
-  }
-  const cell=getCell(e);
-  if(cell){
-    coordsBar.textContent=`X: ${cell.x} — Y: ${cell.y}`;
-    $id('statusX').textContent=cell.x; $id('statusY').textContent=cell.y;
-  }
-  if(gapDrawing){
-    const el=document.elementFromPoint(e.clientX,e.clientY);
-    if(el&&el.dataset.gtype) applyGapTool(el.dataset.gtype,+el.dataset.gx,+el.dataset.gy);
-    return;
-  }
-  if(!isDrawing||!cell) return;
-  if(cell.x===lastX&&cell.y===lastY) return;
-  applyTool(cell.x,cell.y,false);
-  lastX=cell.x; lastY=cell.y;
-});
-
-vp.addEventListener('pointerup',e=>{
-  if(tool==='select'){ SEL.onUp(e); return; }
-  if(tool==='brush') return;
-  isDrawing=false; panActive=false; gapDrawing=false;
-  try{vp.releasePointerCapture(e.pointerId);}catch(err){}
-});
 
 /* ══════════════════════════════════════════
-   BACKGROUND
+   BACKGROUND — BLEND MODE FIX
+   
+   ROOT CAUSE: gc uses transform:scale() which creates a stacking context.
+   Any child element's mix-blend-mode is TRAPPED within gc's stacking context
+   and cannot blend with the dark vp background.
+   
+   FIX: bgLayer stays as a SIBLING of gc inside vp (NOT a child of gc).
+   We position it using the gc's bounding rect relative to vp.
+   The image's mix-blend-mode now correctly composites against vp background.
 ══════════════════════════════════════════ */
 function applyBg(){
   if(!bgImg){bgL.style.display='none';bgL.innerHTML='';return;}
@@ -764,13 +483,16 @@ function applyBg(){
   const gridW=cols*(cellSz+gapSz);
   const gridH=rows*(cellSz+gapSz);
 
+  // Default size on first load
   if(!bgProps.w||bgProps.w===0){
-    bgProps.w=Math.round(gridW*0.8);
-    bgProps.h=Math.round(gridH*0.8);
+    bgProps.w=Math.round(gridW*zoom*0.8);
+    bgProps.h=Math.round(gridH*zoom*0.8);
     bgProps.x=Math.round(gridW*0.1);
     bgProps.y=Math.round(gridH*0.1);
   }
 
+  // Position bgLayer to exactly overlay the grid content area
+  // gc.getBoundingClientRect() gives screen coords; subtract vp rect + add scroll
   const gcRect=gc.getBoundingClientRect();
   const vpRect=vp.getBoundingClientRect();
   const offLeft = gcRect.left - vpRect.left + vp.scrollLeft + pad*zoom;
@@ -795,7 +517,7 @@ function buildBgStatic(){
   imgDiv.style.cssText=`
     position:absolute;
     left:${bgProps.x*zoom}px; top:${bgProps.y*zoom}px;
-    width:${bgProps.w*zoom}px; height:${bgProps.h*zoom}px;
+    width:${bgProps.w}px; height:${bgProps.h}px;
     background-image:url(${bgImg});
     background-size:100% 100%; background-repeat:no-repeat;
     opacity:${bgProps.opacity};
@@ -813,7 +535,7 @@ function buildBgFrame(){
   frame.style.cssText=`
     position:absolute;
     left:${bgProps.x*zoom}px; top:${bgProps.y*zoom}px;
-    width:${bgProps.w*zoom}px; height:${bgProps.h*zoom}px;
+    width:${bgProps.w}px; height:${bgProps.h}px;
     box-sizing:border-box;
     border:2px dashed rgba(66,165,245,0.8);
     pointer-events:auto; z-index:11; touch-action:none;
@@ -830,6 +552,7 @@ function buildBgFrame(){
   `;
   frame.appendChild(imgDiv);
 
+  // زر إعدادات ⚙️ فوق الصورة على الشبكة
   const settingsBtn = document.createElement('button');
   settingsBtn.id = '__bgSettingsFab';
   settingsBtn.innerHTML = '⚙️';
@@ -845,6 +568,7 @@ function buildBgFrame(){
   settingsBtn.addEventListener('pointerdown', e=>e.stopPropagation());
   settingsBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    // افتح أدوات وأظهر الإعدادات
     openSheet('bg');
     setTimeout(()=>{
       const ctrl=$id('bgControls');
@@ -866,12 +590,12 @@ function attachFrameEvents(frame,imgEl){
   let action=null, start=null;
   function syncFrame(){
     frame.style.left=(bgProps.x*zoom)+'px'; frame.style.top=(bgProps.y*zoom)+'px';
-    frame.style.width=(bgProps.w*zoom)+'px'; frame.style.height=(bgProps.h*zoom)+'px';
+    frame.style.width=bgProps.w+'px'; frame.style.height=bgProps.h+'px';
     frame.style.transform=`rotate(${bgProps.rotate}deg)`;
     imgEl.style.opacity=bgProps.opacity;
     imgEl.style.mixBlendMode=bgProps.blend;
     $id('bgOpacity').value=bgProps.opacity; $id('bgOpacityVal').textContent=Math.round(bgProps.opacity*100)+'%';
-    const sc=Math.round(bgProps.w/(cols*(cellSz+gapSz))*100);
+    const sc=Math.round(bgProps.w/(cols*(cellSz+gapSz)*zoom)*100);
     $id('bgScale').value=Math.min(300,sc); $id('bgScaleVal').textContent=Math.min(300,sc)+'%';
     $id('bgX').value=Math.round(bgProps.x); $id('bgXVal').textContent=Math.round(bgProps.x);
     $id('bgY').value=Math.round(bgProps.y); $id('bgYVal').textContent=Math.round(bgProps.y);
@@ -886,7 +610,7 @@ function attachFrameEvents(frame,imgEl){
   });
   frame.addEventListener('pointermove',e=>{
     if(!action||!start)return; e.stopPropagation(); e.preventDefault();
-    const dx=(e.clientX-start.mx)/zoom, dy=(e.clientY-start.my)/zoom, MIN=20;
+    const dx=e.clientX-start.mx, dy=e.clientY-start.my, MIN=30;
     if(action==='rot'){
       const fr=frame.getBoundingClientRect();
       const cur=Math.atan2(e.clientY-(fr.top+fr.height/2),e.clientX-(fr.left+fr.width/2));
@@ -894,19 +618,19 @@ function attachFrameEvents(frame,imgEl){
       frame.style.transform=`rotate(${bgProps.rotate}deg)`; return;
     }
     if(action==='move'){
-      bgProps.x=start.x+dx; bgProps.y=start.y+dy;
+      bgProps.x=start.x+dx/zoom; bgProps.y=start.y+dy/zoom;
       frame.style.left=(bgProps.x*zoom)+'px'; frame.style.top=(bgProps.y*zoom)+'px';
-      return;
+      syncFrame(); return;
     }
     let nx=start.x,ny=start.y,nw=start.w,nh=start.h;
     if(action==='br'){nw=Math.max(MIN,start.w+dx);nh=Math.max(MIN,start.h+dy);}
-    else if(action==='bl'){const d=Math.max(MIN,start.w-dx)-start.w;nw+=d;nx-=d;nh=Math.max(MIN,start.h+dy);}
-    else if(action==='tr'){nw=Math.max(MIN,start.w+dx);const d=Math.max(MIN,start.h-dy)-start.h;nh+=d;ny-=d;}
-    else if(action==='tl'){const dw=Math.max(MIN,start.w-dx)-start.w;nw+=dw;nx-=dw;const dh=Math.max(MIN,start.h-dy)-start.h;nh+=dh;ny-=dh;}
+    else if(action==='bl'){const d=Math.max(MIN,start.w-dx)-start.w;nw+=d;nx-=d/zoom;nh=Math.max(MIN,start.h+dy);}
+    else if(action==='tr'){nw=Math.max(MIN,start.w+dx);const d=Math.max(MIN,start.h-dy)-start.h;nh+=d;ny-=d/zoom;}
+    else if(action==='tl'){const dw=Math.max(MIN,start.w-dx)-start.w;nw+=dw;nx-=dw/zoom;const dh=Math.max(MIN,start.h-dy)-start.h;nh+=dh;ny-=dh/zoom;}
     else if(action==='rm'){nw=Math.max(MIN,start.w+dx);}
-    else if(action==='lm'){const d=Math.max(MIN,start.w-dx)-start.w;nw+=d;nx-=d;}
+    else if(action==='lm'){const d=Math.max(MIN,start.w-dx)-start.w;nw+=d;nx-=d/zoom;}
     else if(action==='bm'){nh=Math.max(MIN,start.h+dy);}
-    else if(action==='tm'){const d=Math.max(MIN,start.h-dy)-start.h;nh+=d;ny-=d;}
+    else if(action==='tm'){const d=Math.max(MIN,start.h-dy)-start.h;nh+=d;ny-=d/zoom;}
     bgProps.x=nx;bgProps.y=ny;bgProps.w=nw;bgProps.h=nh; syncFrame();
   });
   frame.addEventListener('pointerup',e=>{try{frame.releasePointerCapture(e.pointerId);}catch(err){}action=null;start=null;});
@@ -916,11 +640,13 @@ function attachFrameEvents(frame,imgEl){
 function syncBgControls(){
   $id('bgX').value=Math.round(bgProps.x); $id('bgXVal').textContent=Math.round(bgProps.x);
   $id('bgY').value=Math.round(bgProps.y); $id('bgYVal').textContent=Math.round(bgProps.y);
-  const sc=Math.round(bgProps.w/(cols*(cellSz+gapSz))*100);
+  const sc=Math.round(bgProps.w/(cols*(cellSz+gapSz)*zoom)*100);
   $id('bgScale').value=Math.min(300,sc); $id('bgScaleVal').textContent=Math.min(300,sc)+'%';
   $id('bgOpacity').value=bgProps.opacity; $id('bgOpacityVal').textContent=Math.round(bgProps.opacity*100)+'%';
 }
 
+/* BG controls */
+/* ── setBgImage — مركزي لكل مصادر الصورة ── */
 function setBgImage(dataUrl){
   bgImg = dataUrl;
   bgProps.rotate = 0;
@@ -930,14 +656,15 @@ function setBgImage(dataUrl){
   const img = new Image();
   img.onload = () => {
     const cellTotal = cellSz + gapSz;
-    const targetW = 8 * cellTotal;
-    const ratio   = img.naturalHeight / Math.max(1, img.naturalWidth);
+    const targetW   = 8 * cellTotal * zoom;
+    const ratio     = img.naturalHeight / Math.max(1, img.naturalWidth);
     bgProps.w = targetW;
     bgProps.h = Math.round(targetW * ratio);
     bgProps.x = 2 * cellTotal;
     bgProps.y = 2 * cellTotal;
     bgDragEnable = true;
     if($id('bgDraggable')) $id('bgDraggable').checked = true;
+    // أظهر الإعدادات فوراً
     const bgCtrl = $id('bgControls');
     if(bgCtrl) bgCtrl.style.display = 'flex';
     applyBg();
@@ -947,6 +674,7 @@ function setBgImage(dataUrl){
   img.src = dataUrl;
 }
 
+/* ── معاينة الصورة ── */
 function updateBgPreview(dataUrl){
   const uploadZone  = $id('bgUploadZone');
   const previewArea = $id('bgPreviewArea');
@@ -975,7 +703,7 @@ $id('bgFileInput').addEventListener('change',e=>{
     const v=+e.target.value;
     if(id==='bgOpacity'){bgProps.opacity=v;$id('bgOpacityVal').textContent=Math.round(v*100)+'%';}
     else if(id==='bgScale'){
-      const gW=cols*(cellSz+gapSz);
+      const gW=cols*(cellSz+gapSz)*zoom;
       const ratio=bgProps.h/Math.max(1,bgProps.w);
       bgProps.w=Math.round(gW*v/100); bgProps.h=Math.round(bgProps.w*ratio);
       $id('bgScaleVal').textContent=v+'%';
@@ -999,6 +727,7 @@ $id('bgRemove').addEventListener('click',()=>{
   updateBgPreview(null);
 });;
 
+// Re-position bgLayer when vp scrolls (since bgLayer is vp-relative)
 vp.addEventListener('scroll',()=>{if(bgImg)applyBg();});
 
 /* ══════════ RULERS ══════════ */
@@ -1015,11 +744,11 @@ function initRulers(){
 $id('showRulers').addEventListener('change',e=>{showRulers=e.target.checked;rulerH.style.display=showRulers?'block':'none';rulerV.style.display=showRulers?'block':'none';});
 
 /* ══════════ COLORS & TOOLS ══════════ */
+// (color listeners handled by SHARED SWATCH SYSTEM above)
 $id('bgColor').addEventListener('input',e=>{document.documentElement.style.setProperty('--cell-bg',e.target.value);});
 $id('canvasBgColor').addEventListener('input',e=>{$id('canvasArea').style.background=e.target.value;vp.style.background=e.target.value;});
 $id('canvasDark').addEventListener('click',()=>{$id('canvasBgColor').value='#0A0C10';$id('canvasBgColor').dispatchEvent(new Event('input'));});
 $id('canvasLight').addEventListener('click',()=>{$id('canvasBgColor').value='#F0EDE8';$id('canvasBgColor').dispatchEvent(new Event('input'));});
-
 /* ══════════ SHARED SWATCH SYSTEM ══════════ */
 const SWATCH_KEY = 'kufi_swatches';
 const DEFAULT_SWATCHES = ['#7C3AED','#A855F7','#EF4444','#22C55E','#3B82F6','#EC4899','#14B8A6','#F5A623','#FFFFFF','#111827'];
@@ -1047,6 +776,7 @@ function syncSwatches(){
 function buildSwatches(){
   const list = loadSwatchList();
 
+  // ── Panel swatches (tab-tools) ──
   const container = $id('swatchesContainer');
   if(container){
     container.innerHTML='';
@@ -1055,6 +785,7 @@ function buildSwatches(){
       s.className='swatch'; s.style.background=color; s.dataset.color=color;
       if(color===drawColor) s.classList.add('selected');
       s.addEventListener('click',()=>setDrawColorFull(color));
+      // Long press to remove
       let holdTimer=null;
       s.addEventListener('pointerdown',()=>{ holdTimer=setTimeout(()=>{ if(confirm(`حذف اللون ${color} من القائمة؟`)){ removeSwatchColor(color); }},700); });
       s.addEventListener('pointerup',()=>clearTimeout(holdTimer));
@@ -1063,6 +794,7 @@ function buildSwatches(){
     });
   }
 
+  // ── Floating toolbar swatches ──
   const floatEl = $id('floatSwatches');
   if(floatEl){
     floatEl.innerHTML='';
@@ -1090,6 +822,7 @@ function removeSwatchColor(color){
   buildSwatches();
 }
 
+/* ── Color dropdown toggle ── */
 const colorDropBtn = document.getElementById('colorDropBtn');
 const colorDropdown = document.getElementById('colorDropdown');
 colorDropBtn.addEventListener('click', e=>{
@@ -1099,218 +832,45 @@ colorDropBtn.addEventListener('click', e=>{
 document.addEventListener('click', ()=> colorDropdown.classList.remove('open'));
 colorDropdown.addEventListener('click', e=> e.stopPropagation());
 
+// Add swatch button (in tools panel)
 $id('btnAddSwatch').addEventListener('click',()=>$id('newSwatchColor').click());
 $id('newSwatchColor').addEventListener('input',e=>addSwatchColor(e.target.value));
 
+// fillColor + quickColor sync
 $id('fillColor').addEventListener('input',e=>setDrawColorFull(e.target.value));
 $id('quickColor').addEventListener('input',e=>setDrawColorFull(e.target.value));
 
 function setTool(t){
   tool=t;
   document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
-  vp.classList.toggle('pan-mode',    t==='pan');
-  vp.classList.toggle('select-mode', t==='select');
-  vp.classList.toggle('brush-mode',  t==='brush');
-  $id('statusTool').textContent={draw:'رسم',erase:'ممحاة',fill:'ملء',pan:'تحريك',select:'تحديد',brush:'قلم متواصل'}[t]||t;
-  if(t!=='select') SEL.reset();
-  if(t!=='brush')  BRUSH.reset();
-  const mp=$id('brushModePanel');
-  if(mp) mp.style.display=(t==='brush')?'flex':'none';
+  vp.classList.toggle('pan-mode',t==='pan');
+  vp.classList.toggle('select-mode',t==='select');
+  $id('statusTool').textContent={draw:'رسم',erase:'ممحاة',fill:'ملء',pan:'تحريك',select:'تحديد'}[t]||t;
+  const sb=$id('selActionBar');if(sb)sb.style.display=(t==='select'?'flex':'none');
+  if(t!=='select')clearSelection();
 }
 document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
 
-/* ══════════ BRUSH ══════════ */
-const BRUSH = (()=>{
-  let ax=-1, ay=-1;
-  let bmode=1;
-  let anchorEl=null, previewEls=[];
-
-  document.querySelectorAll('.brush-mode-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      bmode=+btn.dataset.bmode;
-      document.querySelectorAll('.brush-mode-btn').forEach(b=>b.classList.toggle('active',b===btn));
-    });
-  });
-
-  function bres(x0,y0,x1,y1){
-    const p=[];
-    let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),
-        sx=x0<x1?1:-1,sy=y0<y1?1:-1,err=dx-dy,cx=x0,cy=y0;
-    for(;;){
-      p.push({x:cx,y:cy});
-      if(cx===x1&&cy===y1) break;
-      const e2=2*err;
-      if(e2>-dy){err-=dy;cx+=sx;}
-      if(e2< dx){err+=dx;cy+=sy;}
+/* ── أزرار شريط التحديد ── */
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('button');if(!btn)return;
+  if(btn.id==='selMoveUp')   moveSelection(0,-1);
+  if(btn.id==='selMoveDown') moveSelection(0,1);
+  if(btn.id==='selMoveLeft') moveSelection(-1,0);
+  if(btn.id==='selMoveRight')moveSelection(1,0);
+  if(btn.id==='selDeselect') clearSelection();
+  if(btn.id==='selClear'){
+    if(selStart.x<0)return;
+    const r=_selRect();saveState();
+    for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++){
+      grid[y][x]=0;delete cellColors[`${x},${y}`];
+      if(gapV[y]&&x<cols-1){gapV[y][x]=0;delete gapVColors[`${x},${y}`];}
+      if(y<rows-1&&gapH[y]){gapH[y][x]=0;delete gapHColors[`${x},${y}`];}
+      if(y<rows-1&&x<cols-1&&gapD[y]){gapD[y][x]=0;delete gapDColors[`${x},${y}`];}
     }
-    return p;
+    renderGrid();clearSelection();
   }
-
-  function fCell(x,y){
-    if(x<0||x>=cols||y<0||y>=rows||grid[y][x]===1) return;
-    grid[y][x]=1; cellColors[`${x},${y}`]=drawColor;
-    const el=cellEl(x,y); if(el){el.classList.add('filled');el.style.background=drawColor;}
-  }
-  function fGV(x,y){
-    if(x<0||x>=cols-1||y<0||y>=rows||gapV[y][x]===1) return;
-    gapV[y][x]=1; gapVColors[`${x},${y}`]=drawColor;
-  }
-  function fGH(x,y){
-    if(x<0||x>=cols||y<0||y>=rows-1||gapH[y][x]===1) return;
-    gapH[y][x]=1; gapHColors[`${x},${y}`]=drawColor;
-  }
-  function fGD(x,y){
-    if(x<0||x>=cols-1||y<0||y>=rows-1||gapD[y][x]===1) return;
-    gapD[y][x]=1; gapDColors[`${x},${y}`]=drawColor;
-  }
-
-  function fillAroundCell(x,y){
-    fGV(x-1,y); fGV(x,y);
-    fGH(x,y-1); fGH(x,y);
-    fGD(x-1,y-1); fGD(x,y-1);
-    fGD(x-1,y);   fGD(x,y);
-  }
-
-  function fillGapBetween(x0,y0,x1,y1){
-    const dx=x1-x0, dy=y1-y0;
-    if(dy===0){
-      fGV(Math.min(x0,x1), y0);
-    } else if(dx===0){
-      fGH(x0, Math.min(y0,y1));
-    } else {
-      const lx=dx>0?x0:x1, ly=dy>0?y0:y1;
-      fGV(lx,y0); fGV(lx,y1);
-      fGH(x0,ly); fGH(x1,ly);
-      fGD(lx,ly);
-    }
-  }
-
-  function fillMode2(x0,y0,x1,y1){
-    const dx=x1-x0, dy=y1-y0;
-    if(Math.abs(dx) >= Math.abs(dy)){
-      const y=y0, sx=Math.min(x0,x1), ex=Math.max(x0,x1);
-      for(let x=sx; x<ex; x++){
-        fGH(x+1, y);
-        fGD(x, y);
-      }
-      fGD(ex, y);
-    } else {
-      const x=x0, sy=Math.min(y0,y1), ey=Math.max(y0,y1);
-      for(let y=sy; y<ey; y++){
-        fGV(x, y+1);
-        fGD(x, y);
-      }
-      fGD(x, ey);
-    }
-  }
-
-  function drawAnchor(x,y){
-    if(anchorEl) anchorEl.remove();
-    const T=(cellSz+gapSz)*zoom, cSz=cellSz*zoom, gSz=gapSz*zoom, pad=20*zoom;
-    const gcR=gc.getBoundingClientRect(), vpR=vp.getBoundingClientRect();
-    const ox=gcR.left-vpR.left+vp.scrollLeft+pad;
-    const oy=gcR.top -vpR.top +vp.scrollTop +pad;
-    anchorEl=document.createElement('div');
-    anchorEl.className='brush-anchor';
-    if(bmode===2){
-      const sz=Math.max(2, gSz*1);
-      anchorEl.style.cssText=`width:${sz}px;height:${sz}px;`
-        +`left:${15+ox+x*T+T/2}px;`
-        +`top:${15+oy+y*T+T/2}px;`;
-    } else {
-      const sz=Math.max(10,T*0.55);
-      anchorEl.style.cssText=`width:${sz}px;height:${sz}px;`
-        +`left:${ox+x*T+T/2}px;`
-        +`top:${oy+y*T+T/2}px;`;
-    }
-    vp.appendChild(anchorEl);
-  }
-
-  function showPreview(tx,ty){
-    clearPreview();
-    if(ax<0||tx<0) return;
-    const T=(cellSz+gapSz)*zoom, gSz=gapSz*zoom, cSz=cellSz*zoom, pad=20*zoom;
-    const gcR=gc.getBoundingClientRect(), vpR=vp.getBoundingClientRect();
-    const ox=gcR.left-vpR.left+vp.scrollLeft+pad;
-    const oy=gcR.top -vpR.top +vp.scrollTop +pad;
-
-    if(bmode===2){
-      const dx=tx-ax, dy=ty-ay;
-      function addPrev(l,t,w,h){
-        const el=document.createElement('div');
-        el.className='brush-preview';
-        el.style.cssText=`left:${l}px;top:${t}px;width:${w}px;height:${h}px;`;
-        vp.appendChild(el); previewEls.push(el);
-      }
-      if(Math.abs(dx)>=Math.abs(dy)){
-        const y=ay, sx=Math.min(ax,tx), ex=Math.max(ax,tx);
-        for(let x=sx;x<ex;x++){
-          addPrev(ox+x*T+cSz, oy+y*T,      gSz, cSz);
-          if(y>0) addPrev(ox+x*T+cSz, oy+y*T-gSz, gSz, gSz);
-          addPrev(ox+x*T+cSz, oy+y*T+cSz,  gSz, gSz);
-        }
-      } else {
-        const x=ax, sy=Math.min(ay,ty), ey=Math.max(ay,ty);
-        for(let y=sy;y<ey;y++){
-          addPrev(ox+x*T,      oy+y*T+cSz, cSz, gSz);
-          if(x>0) addPrev(ox+x*T-gSz, oy+y*T+cSz, gSz, gSz);
-          addPrev(ox+x*T+cSz, oy+y*T+cSz, gSz, gSz);
-        }
-      }
-      return;
-    }
-
-    const path=bres(ax,ay,tx,ty);
-    if(path.length<2) return;
-    path.forEach(({x,y})=>{
-      if(x<0||x>=cols||y<0||y>=rows||grid[y][x]===1) return;
-      const el=document.createElement('div');
-      el.className='brush-preview';
-      el.style.cssText=`left:${ox+x*T}px;top:${oy+y*T}px;width:${T}px;height:${T}px;`;
-      vp.appendChild(el); previewEls.push(el);
-    });
-  }
-  function clearPreview(){ previewEls.forEach(e=>e.remove()); previewEls=[]; }
-
-  function strokeTo(tx,ty){
-    if(ax<0){
-      ax=tx; ay=ty;
-      if(bmode!==2) fCell(tx,ty);
-      if(bmode===3) fillAroundCell(tx,ty);
-      refreshAllRadius(); renderGapElements(); updateStatus();
-      drawAnchor(tx,ty);
-      return;
-    }
-    if(bmode===2){
-      fillMode2(ax,ay,tx,ty);
-      ax=tx; ay=ty;
-    } else {
-      const path=bres(ax,ay,tx,ty);
-      for(let i=0;i<path.length;i++){
-        const {x,y}=path[i];
-        if(bmode===1){
-          fCell(x,y);
-          if(i>0) fillGapBetween(path[i-1].x,path[i-1].y,x,y);
-        } else if(bmode===3){
-          fCell(x,y);
-          fillAroundCell(x,y);
-          if(i>0) fillGapBetween(path[i-1].x,path[i-1].y,x,y);
-        }
-      }
-      ax=tx; ay=ty;
-    }
-    refreshAllRadius(); renderGapElements(); updateStatus();
-    drawAnchor(ax,ay);
-  }
-
-  function reset(){
-    ax=-1; ay=-1;
-    if(anchorEl){anchorEl.remove();anchorEl=null;}
-    clearPreview();
-  }
-
-  return { get active(){ return ax>=0; }, strokeTo, showPreview, clearPreview, reset };
-})();
+});
 
 /* ══════════ GRID CONTROLS ══════════ */
 $id('cellSizeR').addEventListener('input',e=>{
@@ -1356,6 +916,7 @@ function setZoom(z){
   const zl=$id('zoomLevel2'); if(zl) zl.textContent=txt;
   if(bgImg) applyBg();
 }
+// Wire topbar zoom buttons (they live in topbarRow2)
 $id('zoomIn2').addEventListener('click',()=>setZoom(zoom+0.1));
 $id('zoomOut2').addEventListener('click',()=>setZoom(zoom-0.1));
 $id('zoomFit2').addEventListener('click',()=>{setZoom(1);vp.scrollTo({top:0,left:0,behavior:'smooth'});});
@@ -1364,17 +925,33 @@ vp.addEventListener('wheel',e=>{
 },{passive:false});
 
 /* ══════════ LETTER BLOCKS ══════════ */
+/* ══════════════════════════════════════════════
+   LETTER LIBRARY — IndexedDB + Editor
+══════════════════════════════════════════════ */
+
+/* ══════════ LETTER LIBRARY — External JSON + IndexedDB ══════════
+   Flow:
+   1. openDB()  — open IndexedDB 'KufiLetters' v2
+   2. First run: fetch letters.json → seed DB (store._default + user overrides)
+   3. loadMergedLetters() — merge defaults + user overrides → CUSTOM_LETTERS
+   4. User edits → saved to DB as user overrides (ch key)
+   5. "Reset to default" → delete all user overrides, reload defaults
+══════════════════════════════════════════════════════════════════ */
+
 let lettersDB = null;
 let CUSTOM_LETTERS = {};
-let DEFAULT_LETTERS = {};
+let DEFAULT_LETTERS = {}; // loaded from letters.json, immutable at runtime
 
+/* ── IndexedDB ── */
 function openDB(){
   return new Promise((res,rej)=>{
     const req = indexedDB.open('KufiLetters', 2);
     req.onupgradeneeded = e => {
       const db = e.target.result;
+      // letters store: user overrides keyed by ch
       if(!db.objectStoreNames.contains('letters'))
         db.createObjectStore('letters', {keyPath:'ch'});
+      // meta store: flags like _defaultVersion
       if(!db.objectStoreNames.contains('meta'))
         db.createObjectStore('meta', {keyPath:'k'});
     };
@@ -1422,8 +999,10 @@ function dbClearStore(store='letters'){
   });
 }
 
+/* ── Fetch default letters.json ── */
 async function fetchDefaultLetters(){
   try{
+    // Build URL relative to the HTML file location (works on GitHub Pages /repo/ paths)
     const base = document.currentScript?.src
       ? new URL('.', document.currentScript.src).href
       : new URL('.', location.href).href;
@@ -1438,21 +1017,26 @@ async function fetchDefaultLetters(){
   }
 }
 
+/* ── Seed DB on first run (or when default version changes) ── */
 async function seedDefaultsIfNeeded(){
   const defaults = await fetchDefaultLetters();
   DEFAULT_LETTERS = defaults;
   const meta = await dbGet('_defaultVersion');
-  const currentVer = 1;
+  const currentVer = 1; // bump this when you update letters.json
   if(!meta || meta.v !== currentVer){
+    // First time or version changed — nothing to clear
+    // (user overrides stay, we just update our in-memory defaults)
     await dbPut({k:'_defaultVersion', v: currentVer}, 'meta');
   }
 }
 
+/* ── Build CUSTOM_LETTERS: defaults merged with user overrides ── */
 async function loadMergedLetters(){
   await seedDefaultsIfNeeded();
   const userOverrides = await dbGetAll('letters');
   CUSTOM_LETTERS = {};
 
+  // 1. Load defaults
   Object.entries(DEFAULT_LETTERS).forEach(([ch, v])=>{
     const rows = v.m.length, cols = v.m[0]?.length||1;
     CUSTOM_LETTERS[ch] = {
@@ -1465,6 +1049,7 @@ async function loadMergedLetters(){
     };
   });
 
+  // 2. Overlay user overrides (user edits win)
   userOverrides.forEach(obj=>{
     const rows = obj.m.length, cols = obj.m[0]?.length||1;
     CUSTOM_LETTERS[obj.ch] = {
@@ -1484,6 +1069,7 @@ async function saveLetterToDB(ch, name, m){
 
 async function deleteLetterFromDB(ch){
   await dbDelete(ch);
+  // Restore from defaults if it exists there
   if(DEFAULT_LETTERS[ch]){
     const v = DEFAULT_LETTERS[ch];
     const rows = v.m.length, cols = v.m[0].length;
@@ -1499,12 +1085,14 @@ async function deleteLetterFromDB(ch){
   }
 }
 
+/* ── Reset ALL user overrides → back to letters.json ── */
 async function resetToDefaults(){
   await dbClearStore('letters');
   await loadMergedLetters();
   buildLetters($id('libSearch').value);
 }
 
+/* ── Build Library UI ── */
 function buildLetters(filter=''){
   const lib=$id('letterLibrary'); lib.innerHTML='';
   const fl=filter.trim().toLowerCase();
@@ -1512,6 +1100,7 @@ function buildLetters(filter=''){
     .filter(([ch,{name}])=>!fl||ch.includes(fl)||name.toLowerCase().includes(fl))
     .forEach(([ch,{name,m,gH,gV,_builtin}])=>{
     const card=document.createElement('div'); card.className='letter-card';
+    // mini preview via canvas (correct, no mirror issue)
     const rows=m.length, cols=m[0]?.length||1;
     const dotSz=3, gapDotSz=1, T=dotSz+gapDotSz;
     const cw=cols*T-gapDotSz, ch2=rows*T-gapDotSz;
@@ -1519,16 +1108,19 @@ function buildLetters(filter=''){
     cv.style.cssText=`display:block;image-rendering:pixelated;`;
     const ctx=cv.getContext('2d');
     ctx.clearRect(0,0,cw,ch2);
+    // cells
     m.forEach((row,y)=>row.forEach((v,x)=>{
       if(!v) return;
       ctx.fillStyle='#F5A623';
       ctx.fillRect(x*T,y*T,dotSz,dotSz);
     }));
+    // gapH
     if(gH) gH.forEach((row,y)=>row.forEach((v,x)=>{
       if(!v) return;
       ctx.fillStyle='#F5A623';
       ctx.fillRect(x*T,(y+1)*T-gapDotSz,dotSz,gapDotSz);
     }));
+    // gapV
     if(gV) gV.forEach((row,y)=>row.forEach((v,x)=>{
       if(!v) return;
       ctx.fillStyle='#F5A623';
@@ -1536,6 +1128,7 @@ function buildLetters(filter=''){
     }));
     const nm=document.createElement('div'); nm.className='lc-name'; nm.textContent=name+(_builtin?'':' ✎');
     const chLbl=document.createElement('div'); chLbl.className='lc-char'; chLbl.textContent=ch;
+    // action buttons overlay
     const acts=document.createElement('div'); acts.className='lc-actions';
     const editBtn=document.createElement('button'); editBtn.className='lc-act-btn'; editBtn.title='تعديل';
     editBtn.innerHTML='✎';
@@ -1553,20 +1146,27 @@ function buildLetters(filter=''){
 
 $id('libSearch').addEventListener('input',e=>buildLetters(e.target.value));
 
-/* ══════════ LETTER EDITOR ══════════ */
-let leMatrix=[];
-let leGapH=[];
-let leGapV=[];
-let leGapD=[];
+/* ── Letter Editor ── */
+/* ══════════════════════════════════════════════
+   LETTER EDITOR — Real grid with cells + gapH + gapV + gapD
+   Mirrors the main canvas so letters look identical when placed
+══════════════════════════════════════════════ */
+
+let leMatrix=[];            // cells [rows][cols]
+let leGapH=[];              // horizontal gaps [rows-1][cols]
+let leGapV=[];              // vertical gaps   [rows][cols-1]
+let leGapD=[];              // corner dots     [rows-1][cols-1]
 let leEditCh=null;
 let leDrawing=false, leDrawVal=1, leDrawType=null;
-let leTool='draw';
+let leTool='draw'; // 'draw' | 'erase'
 
+// Editor display constants — calculated from available space
 const LE_PAD=8;
 
 function leCalcSizes(rows,cols){
   const maxW=Math.min(window.innerWidth*0.88, 400) - LE_PAD*2 - 20;
   const maxH=Math.min(window.innerHeight*0.5, 300) - LE_PAD*2;
+  // cellSz and gapSz proportional to main canvas ratio (gap = 0.33 * cell)
   const totalCols = cols + (cols-1)*0.38;
   const totalRows = rows + (rows-1)*0.38;
   const szFromW = maxW / totalCols;
@@ -1594,6 +1194,7 @@ function openEditor(ch=null){
   const rows = existing ? existing.m.length : 5;
   const cols = existing ? existing.m[0].length : 5;
   $id('leGridH').value=rows; $id('leGridW').value=cols;
+  // Load existing data
   leMatrix = existing ? existing.m.map(r=>[...r]) : Array.from({length:rows},()=>Array(cols).fill(0));
   leGapH   = existing?.gH ? existing.gH.map(r=>[...r]) : Array.from({length:rows-1},()=>Array(cols).fill(0));
   leGapV   = existing?.gV ? existing.gV.map(r=>[...r]) : Array.from({length:rows},()=>Array(cols-1).fill(0));
@@ -1609,6 +1210,7 @@ function leSetTool(t){
 }
 document.querySelectorAll('.le-tool-btn').forEach(b=>b.addEventListener('click',()=>leSetTool(b.dataset.letool)));
 
+/* ── Render the editor grid (absolute-positioned like main canvas) ── */
 function renderLeEditor(){
   const rows=leMatrix.length, cols=leMatrix[0]?.length||1;
   const {cSz, gSz} = leCalcSizes(rows,cols);
@@ -1619,6 +1221,7 @@ function renderLeEditor(){
   eg.innerHTML='';
   eg.style.width=W+'px'; eg.style.height=H+'px';
 
+  // Cells
   for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
     const el=document.createElement('div');
     el.className='le-gcell'+(leMatrix[y][x]?' on':'');
@@ -1627,6 +1230,7 @@ function renderLeEditor(){
     el.style.cssText=`left:${LE_PAD+x*total}px;top:${LE_PAD+y*total}px;width:${cSz}px;height:${cSz}px;border-radius:${R};`;
     eg.appendChild(el);
   }
+  // gapH (horizontal — between rows)
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols;gx++){
     const v=leGapH[gy][gx];
     const el=document.createElement('div');
@@ -1635,6 +1239,7 @@ function renderLeEditor(){
     el.style.cssText=`left:${LE_PAD+gx*total}px;top:${LE_PAD+(gy+1)*total-gSz}px;width:${cSz}px;height:${gSz}px;border-radius:${v?leGHRad(gx,gy,cSz):'0'};`;
     eg.appendChild(el);
   }
+  // gapV (vertical — between cols)
   for(let gy=0;gy<rows;gy++) for(let gx=0;gx<cols-1;gx++){
     const v=leGapV[gy][gx];
     const el=document.createElement('div');
@@ -1643,6 +1248,7 @@ function renderLeEditor(){
     el.style.cssText=`left:${LE_PAD+(gx+1)*total-gSz}px;top:${LE_PAD+gy*total}px;width:${gSz}px;height:${cSz}px;border-radius:${v?leGVRad(gx,gy,cSz):'0'};`;
     eg.appendChild(el);
   }
+  // gapD (corner dots)
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols-1;gx++){
     const v=leGapD[gy][gx];
     const el=document.createElement('div');
@@ -1653,6 +1259,7 @@ function renderLeEditor(){
     eg.appendChild(el);
   }
 
+  // Pointer events
   let drawing=false, dVal=1, dType=null;
   eg.onpointerdown=e=>{
     const el=e.target; if(!el.dataset.t) return;
@@ -1661,7 +1268,7 @@ function renderLeEditor(){
     const t=el.dataset.t, x=+el.dataset.x, y=+el.dataset.y;
     dType=t;
     const cur=leGetVal(t,x,y);
-    dVal = leTool==='erase' ? 0 : (cur?0:1);
+    dVal = leTool==='erase' ? 0 : (cur?0:1); // toggle on first click
     leSetVal(t,x,y,dVal);
     leRefreshEl(el,t,x,y,cSz,gSz);
     leRefreshNeighbours(t,x,y,cSz,gSz);
@@ -1672,7 +1279,7 @@ function renderLeEditor(){
     const el=raw?.closest?.('[data-t]')||raw;
     if(!el?.dataset?.t) return;
     const t=el.dataset.t, x=+el.dataset.x, y=+el.dataset.y;
-    if(t!==dType) return;
+    if(t!==dType) return; // only paint same type during drag
     if(leGetVal(t,x,y)===dVal) return;
     leSetVal(t,x,y,dVal);
     leRefreshEl(el,t,x,y,cSz,gSz);
@@ -1696,6 +1303,7 @@ function leSetVal(t,x,y,v){
   else if(t==='d'&&leGapD[y]) leGapD[y][x]=v;
 }
 
+/* ── Smart radius functions for the editor (mirrors main canvas) ── */
 function leFC(x,y){const r=leMatrix.length,c=leMatrix[0]?.length||0;return x>=0&&x<c&&y>=0&&y<r&&leMatrix[y][x]===1;}
 function leGH(x,y){const r=leGapH.length,c=leGapH[0]?.length||0;return y>=0&&y<r&&x>=0&&x<c&&leGapH[y][x]===1;}
 function leGV(x,y){const r=leGapV.length,c=leGapV[0]?.length||0;return y>=0&&y<r&&x>=0&&x<c&&leGapV[y][x]===1;}
@@ -1723,6 +1331,7 @@ function leGVRad(gx,gy,cSz){
   const br=leRc(leFC(gx+1,gy)||leGH(gx+1,gy)  ||leGD(gx,gy),cSz);
   return `${tl}px ${tr}px ${br}px ${bl}px`;
 }
+
 function leGDRad(gx,gy,cSz){
   const maxR=Math.min(Math.floor(cSz*0.38/2),3);
   const r2=(b)=>b?0:maxR;
@@ -1747,12 +1356,14 @@ function leGetElAt(t,x,y){
 }
 function leRefreshNeighbours(t,x,y,cSz,gSz){
   const rows=leMatrix.length, cols=leMatrix[0]?.length||1;
+  // Refresh all cells nearby
   for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
     const nx=x+dx, ny=y+dy;
     if(nx<0||nx>=cols||ny<0||ny>=rows) continue;
     const el=leGetElAt('c',nx,ny); if(!el) continue;
     leRefreshEl(el,'c',nx,ny,cSz,gSz);
   }
+  // Refresh nearby gaps
   for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
     ['h','v','d'].forEach(gt=>{
       const nx=x+dx, ny=y+dy;
@@ -1783,6 +1394,7 @@ $id('leSaveBtn').addEventListener('click',async()=>{
   if(!leMatrix.flat().some(v=>v)&&!leGapH.flat().some(v=>v)&&!leGapV.flat().some(v=>v)){
     alert('ارسم شكل الحرف في الشبكة');return;
   }
+  // Save with gaps
   const obj={ch,name,
     m:leMatrix.map(r=>[...r]),
     gH:leGapH.map(r=>[...r]),
@@ -1807,8 +1419,10 @@ $id('leDeleteBtn').addEventListener('click',async()=>{
   $id('letterEditorModal').classList.remove('open');
 });
 
+/* ── Export / Import ── */
 $id('btnAddLetter').addEventListener('click',()=>openEditor(null));
 
+// Reset to defaults
 $id('btnResetLib').addEventListener('click',async()=>{
   if(!confirm('إعادة جميع الحروف للشكل الافتراضي؟\nسيتم حذف كل تعديلاتك على الحروف.')) return;
   await resetToDefaults();
@@ -1853,7 +1467,7 @@ $id('importLibFile').addEventListener('change',async e=>{
   e.target.value='';
 });
 
-/* ══════════ addLetter ══════════ */
+/* ── addLetter — copies cells + all gaps to main canvas ── */
 function addLetter(ch){
   const entry=CUSTOM_LETTERS[ch]; if(!entry) return;
   const {m, gH, gV, gD} = entry;
@@ -1861,6 +1475,7 @@ function addLetter(ch){
   const sx=Math.max(0,+$id('placeX').value), sy=Math.max(0,+$id('placeY').value);
   saveState();
 
+  // ── Place cells ──
   const cells=[];
   m.forEach((row,dy)=>row.forEach((v,dx)=>{
     const x=sx+dx, y=sy+dy;
@@ -1872,8 +1487,11 @@ function addLetter(ch){
     }
   }));
 
+  // ── gapOffsets: store relative (lx,ly) from block's top-left ──
+  // so when block moves by (dx,dy), new absolute = (sx+dx+lx, sy+dy+ly)
   const gapOffsets=[];
 
+  // ── Place gapH ──
   if(gH) gH.forEach((row,dy)=>row.forEach((v,dx)=>{
     const ax=sx+dx, ay=sy+dy;
     if(v&&ax<cols&&ay<rows-1){
@@ -1882,6 +1500,7 @@ function addLetter(ch){
     }
   }));
 
+  // ── Place gapV ──
   if(gV) gV.forEach((row,dy)=>row.forEach((v,dx)=>{
     const ax=sx+dx, ay=sy+dy;
     if(v&&ax<cols-1&&ay<rows){
@@ -1890,6 +1509,7 @@ function addLetter(ch){
     }
   }));
 
+  // ── Place gapD ──
   if(gD) gD.forEach((row,dy)=>row.forEach((v,dx)=>{
     const ax=sx+dx, ay=sy+dy;
     if(v&&ax<cols-1&&ay<rows-1){
@@ -1898,12 +1518,14 @@ function addLetter(ch){
     }
   }));
 
+  // ── Refresh radius + render gaps ──
   cells.forEach(({x,y})=>{const el=cellEl(x,y);if(el)el.style.borderRadius=computeCellRadius(x,y);});
   cells.forEach(({x,y})=>refreshRadiusAround(x,y));
   renderGapElements();
   refreshAllRadius();
 
   const block={id:blockCounter++,ch,cells:[...cells],color:drawColor,gapOffsets,
+    // Store the true origin (top-left of letter grid, not just filled cells)
     originX:sx, originY:sy
   };
   blocks.push(block); createBlockOverlay(block);
@@ -1911,27 +1533,15 @@ function addLetter(ch){
   updateStatus();
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   createBlockOverlay — مع صورة شبحية وبدون تأثير على الشبكة أثناء السحب
-══════════════════════════════════════════════════════════════════ */
 function createBlockOverlay(block){
   const pad=20, total=cellSz+gapSz;
   if(!block.cells.length) return;
-
   const div=document.createElement('div');
   div.className='block-overlay'; div.dataset.blockId=block.id;
 
-  // ── حساب حدود الـ block ──
-  function getBounds(){
-    const xs=block.cells.map(c=>c.x), ys=block.cells.map(c=>c.y);
-    return {
-      mnX:Math.min(...xs), mnY:Math.min(...ys),
-      mxX:Math.max(...xs), mxY:Math.max(...ys)
-    };
-  }
-
   function reposition(){
-    const {mnX,mnY,mxX,mxY}=getBounds();
+    const xs=block.cells.map(c=>c.x), ys=block.cells.map(c=>c.y);
+    const mnX=Math.min(...xs),mnY=Math.min(...ys),mxX=Math.max(...xs),mxY=Math.max(...ys);
     div.style.left=(pad+mnX*total)+'px'; div.style.top=(pad+mnY*total)+'px';
     div.style.width=((mxX-mnX+1)*total)+'px'; div.style.height=((mxY-mnY+1)*total)+'px';
   }
@@ -1940,7 +1550,7 @@ function createBlockOverlay(block){
   const lbl=document.createElement('div'); lbl.className='block-overlay-label'; lbl.textContent=block.ch; div.appendChild(lbl);
   const hint=document.createElement('div'); hint.className='block-overlay-hint'; hint.textContent='اسحب للتحريك'; div.appendChild(hint);
 
-  // ── زر الدمج ──
+  // ── Merge button (tap/click to stamp permanently) ──
   const mergeBtn=document.createElement('button');
   mergeBtn.className='block-merge-btn';
   mergeBtn.title='دمج في اللوحة';
@@ -1954,45 +1564,9 @@ function createBlockOverlay(block){
   });
   div.appendChild(mergeBtn);
 
-  // ── الصورة الشبحية: canvas يرسم شكل الحرف داخل الـ overlay ──
-  const ghost=document.createElement('canvas');
-  ghost.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
-  div.appendChild(ghost);
+  let dragStart=null;
 
-  function drawGhost(){
-    const {mnX,mnY,mxX,mxY}=getBounds();
-    const W=(mxX-mnX+1)*total, H=(mxY-mnY+1)*total;
-    ghost.width=Math.ceil(W); ghost.height=Math.ceil(H);
-    ghost.style.width=W+'px'; ghost.style.height=H+'px';
-    const ctx=ghost.getContext('2d');
-    ctx.clearRect(0,0,W,H);
-    ctx.globalAlpha=0.60;
-    const r=Math.min(cellRad, cellSz/2);
-
-    // خلايا
-    block.cells.forEach(({x,y})=>{
-      const lx=x-mnX, ly=y-mnY;
-      ctx.fillStyle=block.color||drawColor;
-      ctx.beginPath();
-      if(r>0 && ctx.roundRect) ctx.roundRect(lx*total, ly*total, cellSz, cellSz, [r]);
-      else ctx.rect(lx*total, ly*total, cellSz, cellSz);
-      ctx.fill();
-    });
-
-    // gapOffsets
-    if(block.gapOffsets) block.gapOffsets.forEach(({t,lx,ly})=>{
-      // lx,ly هي إزاحة من originX,originY — نحوّلها لإزاحة من mnX,mnY
-      const ax=block.originX+lx-mnX;
-      const ay=block.originY+ly-mnY;
-      ctx.fillStyle=block.color||drawColor;
-      if(t==='h')      ctx.fillRect(ax*total,          ay*total+cellSz,   cellSz, gapSz);
-      else if(t==='v') ctx.fillRect(ax*total+cellSz,   ay*total,          gapSz,  cellSz);
-      else if(t==='d') ctx.fillRect(ax*total+cellSz,   ay*total+cellSz,   gapSz,  gapSz);
-    });
-  }
-  drawGhost();
-
-  /* ── مسح الكتلة من الشبكة (بالموضع الحالي) ── */
+  /* Remove all cells + gaps of this block from canvas */
   function eraseBlock(){
     block.cells.forEach(({x,y})=>{
       if(x<0||x>=cols||y<0||y>=rows) return;
@@ -2009,7 +1583,7 @@ function createBlockOverlay(block){
     block.cells.forEach(({x,y})=>{if(x>=0&&x<cols&&y>=0&&y<rows)refreshRadiusAround(x,y);});
   }
 
-  /* ── كتابة الكتلة في الشبكة (بالموضع الحالي) ── */
+  /* Write all cells + gaps of this block to canvas */
   function stampBlock(){
     block.cells.forEach(({x,y})=>{
       if(x<0||x>=cols||y<0||y>=rows) return;
@@ -2028,10 +1602,7 @@ function createBlockOverlay(block){
     renderGapElements(); refreshAllRadius();
   }
 
-  let dragStart=null;
-
   div.addEventListener('pointerdown',e=>{
-    if(e.target===mergeBtn) return;
     e.stopPropagation(); e.preventDefault();
     div.setPointerCapture(e.pointerId);
     saveState();
@@ -2042,7 +1613,8 @@ function createBlockOverlay(block){
       origOriginY:block.originY,
       lastDdx:0, lastDdy:0
     };
-    // ← لا نمسح من الشبكة هنا — الـ ghost يظهر الشكل
+    eraseBlock();
+    renderGapElements(); refreshAllRadius();
   });
 
   div.addEventListener('pointermove',e=>{
@@ -2055,30 +1627,20 @@ function createBlockOverlay(block){
     const nc=dragStart.origCells.map(c=>({x:c.x+ddx,y:c.y+ddy}));
     if(!nc.every(c=>c.x>=0&&c.x<cols&&c.y>=0&&c.y<rows)) return;
     dragStart.lastDdx=ddx; dragStart.lastDdy=ddy;
-    // ← فقط نحرك الـ overlay بصرياً دون لمس الشبكة
+    // Erase ghost at old position
+    eraseBlock();
+    // Update block position
     block.cells=nc;
     block.originX=dragStart.origOriginX+ddx;
     block.originY=dragStart.origOriginY+ddy;
+    // Stamp at new position
+    stampBlock();
     reposition();
-    // أعد رسم الـ ghost بالحجم الصحيح (لا يتغير الحجم، فقط الموضع)
-    // ghost.width/height ثابتة — لا حاجة لإعادة الرسم
   });
 
   div.addEventListener('pointerup',e=>{
     if(!dragStart) return;
     try{div.releasePointerCapture(e.pointerId);}catch(_){}
-    // ← الآن فقط: امسح الموضع الأصلي واكتب في الموضع الجديد
-    const finalCells=block.cells.map(c=>({...c}));
-    const finalOriginX=block.originX, finalOriginY=block.originY;
-    // اعد للموضع الأصلي للمسح
-    block.cells=dragStart.origCells;
-    block.originX=dragStart.origOriginX;
-    block.originY=dragStart.origOriginY;
-    eraseBlock();
-    // اكتب في الموضع الجديد
-    block.cells=finalCells;
-    block.originX=finalOriginX;
-    block.originY=finalOriginY;
     stampBlock();
     dragStart=null;
     updateStatus(); reposition();
@@ -2086,13 +1648,15 @@ function createBlockOverlay(block){
 
   div.addEventListener('pointercancel',e=>{
     if(!dragStart) return;
-    // إلغاء: ارجع للموضع الأصلي بدون تغيير الشبكة
+    eraseBlock();
     block.cells=dragStart.origCells;
     block.originX=dragStart.origOriginX;
     block.originY=dragStart.origOriginY;
+    stampBlock();
     dragStart=null; reposition();
   });
 
+  // dblclick as fallback for desktop
   div.addEventListener('dblclick',e=>{
     e.stopPropagation();
     stampBlock();
@@ -2113,18 +1677,16 @@ function openSheet(tabName){
   if(currentSheet===tabName && bsSheet.classList.contains('open')){
     closeSheet(); return;
   }
-  if(currentSheet){
-    const prev=$id('tab-'+currentSheet);
-    if(prev) $id('tabPanesStore').appendChild(prev);
-  }
   currentSheet=tabName;
   bsContent.innerHTML='';
   const pane=$id('tab-'+tabName);
   if(pane) bsContent.appendChild(pane);
   document.querySelectorAll('.bs-tab').forEach(t=>t.classList.toggle('active',t.dataset.sheet===tabName));
   document.querySelectorAll('[data-sheet]').forEach(b=>b.classList.toggle('sheet-active',b.dataset.sheet===tabName && b.tagName==='BUTTON'));
+  // Force overlay visible (desktop had display:none)
   bsOverlay.style.display='flex';
   bsOverlay.classList.add('open');
+  // Next frame so CSS transition fires
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>bsSheet.classList.add('open')); });
   sessionStorage.setItem('lastSheet', tabName);
 }
@@ -2139,18 +1701,23 @@ function closeSheet(){
       if(pane) $id('tabPanesStore').appendChild(pane);
     }
     currentSheet=null;
+    // On desktop: re-apply display:none via CSS :not(.open) rule
     bsOverlay.style.display='';
   };
+  // Wait for animation then clean up
   setTimeout(cleanup, 350);
 }
 $id('bsClose').addEventListener('click',closeSheet);
+// Click on overlay background (not the sheet itself) → close
 bsOverlay.addEventListener('click',e=>{
   if(e.target===bsOverlay) closeSheet();
 });
 
+// Bottom sheet tabs (switch tab within open sheet)
 document.querySelectorAll('.bs-tab').forEach(t=>{
   t.addEventListener('click',()=>openSheet(t.dataset.sheet));
 });
+// Topbar sheet buttons
 document.querySelectorAll('[data-sheet]').forEach(b=>{
   if(b.tagName==='BUTTON') b.addEventListener('click',()=>openSheet(b.dataset.sheet));
 });
@@ -2288,13 +1855,29 @@ function loadSettings(){
   }catch(e){}
 }
 
+// Auto-save session every 30s and on grid changes (replaced above with pagehide/visibility)
+
 /* ══════════ WELCOME SCREEN ══════════ */
 function initWelcome(){
+  // ── Handle PWA shortcuts query params ──
   const params = new URLSearchParams(location.search);
-  if(params.get('new')==='1'){ enterApp(); return; }
-  if(params.get('view')==='letters'){ enterApp(); setTimeout(()=>openSheet('letters'), 300); return; }
-  if(params.get('view') === 'about'){ enterApp(); setTimeout(()=> openSheet('about'), 300); return; }
-
+  if(params.get('new')==='1'){
+    // Skip welcome, start fresh
+    enterApp();
+    return;
+  }
+  if(params.get('view')==='letters'){
+    // Skip welcome, open letters sheet
+    enterApp();
+    setTimeout(()=>openSheet('letters'), 300);
+    return;
+  }
+  if(params.get('view') === 'about'){
+    // Skip welcome, open letters sheet
+    enterApp();
+    setTimeout(()=> openSheet('about'), 300);
+    return;
+  }
   const stored=localStorage.getItem(SESSION_KEY);
   let session=null;
   try{session=stored?JSON.parse(stored):null;}catch(e){}
@@ -2321,8 +1904,11 @@ function initWelcome(){
       const f=e.target.files[0]; if(!f) return;
       const rd=new FileReader();
       rd.onload=async ev=>{
-        try{ const d=JSON.parse(ev.target.result); await loadSession(d); enterApp(); }
-        catch(er){alert('خطأ في الملف');}
+        try{
+          const d=JSON.parse(ev.target.result);
+          await loadSession(d);
+          enterApp();
+        }catch(er){alert('خطأ في الملف');}
       };
       rd.readAsText(f);
     };
@@ -2331,15 +1917,19 @@ function initWelcome(){
 
   $id('wlEnter').addEventListener('click',async ()=>{
     const restoreSelected=$id('wlRestore').style.outline.includes('accent');
-    if(restoreSelected && session){ await loadSession(session); }
+    if(restoreSelected && session){
+      await loadSession(session);
+    }
     enterApp();
   });
+  // Default: if session exists, pre-select restore
   if(session) $id('wlRestore').click();
   else $id('wlNew').click();
 }
 
 function enterApp(){
   $id('welcomeScreen').classList.add('hidden');
+  // حفظ الإعدادات عند كل تغيير
   ['cellSizeR','gapSizeR','cellRadR','axisEveryR'].forEach(id=>{
     const el=$id(id);if(!el)return;
     el.addEventListener('input',saveSettings);
@@ -2364,28 +1954,22 @@ $id('btnClear').addEventListener('click',()=>showConfirm('مسح كل المحت
   renderGrid();
 }));
 
-document.addEventListener('click',e=>{
-  if(!e.target.closest('#btnReset')) return;
-  showConfirm('إعادة تهيئة شاملة؟ سيتم مسح كل البيانات والإعدادات.',async()=>{
-    _sessionLocked = true;
-    try{ localStorage.clear(); }catch(e){}
-    try{ sessionStorage.clear(); }catch(e){}
-    try{ indexedDB.deleteDatabase('KufiLetters'); }catch(e){}
-    try{
-      if('caches' in window){
-        const keys=await caches.keys();
-        await Promise.all(keys.map(k=>caches.delete(k)));
-      }
-    }catch(e){}
-    try{
-      if(navigator.serviceWorker){
-        const regs=await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r=>r.unregister()));
-      }
-    }catch(e){}
-    location.reload(true);
-  });
-});
+$id('btnReset').addEventListener('click',()=>showConfirm('إعادة تهيئة شاملة؟ سيتم مسح كل البيانات والإعدادات.',async()=>{
+  try{ localStorage.clear(); }catch(e){}
+  try{
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  location.reload(true);
+}));
 
 /* ══════════ EXPORT ══════════ */
 function exportCanvas(withBg){
@@ -2393,8 +1977,10 @@ function exportCanvas(withBg){
   const total=cellSz+gapSz, pad=10;
   canvas.width=cols*total+pad*2; canvas.height=rows*total+pad*2;
   const ctx=canvas.getContext('2d');
+  // Background
   ctx.fillStyle=getComputedStyle(vp).backgroundColor||'#0A0C10';
   ctx.fillRect(0,0,canvas.width,canvas.height);
+  // BG image
   if(withBg&&bgImg&&bgVisible){
     const im=new Image(); im.src=bgImg;
     ctx.save();
@@ -2406,21 +1992,25 @@ function exportCanvas(withBg){
     try{ctx.drawImage(im,-bgProps.w/(2*zoom),-bgProps.h/(2*zoom),bgProps.w/zoom,bgProps.h/zoom);}catch(er){}
     ctx.restore();
   }
+  // Gap H
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols;gx++){
     if(!gapH[gy][gx]) continue;
     ctx.fillStyle=gapHColors[`${gx},${gy}`]||drawColor;
     ctx.fillRect(pad+gx*total, pad+(gy+1)*total-gapSz, cellSz, gapSz);
   }
+  // Gap V
   for(let gy=0;gy<rows;gy++) for(let gx=0;gx<cols-1;gx++){
     if(!gapV[gy][gx]) continue;
     ctx.fillStyle=gapVColors[`${gx},${gy}`]||drawColor;
     ctx.fillRect(pad+(gx+1)*total-gapSz, pad+gy*total, gapSz, cellSz);
   }
+  // Gap D
   for(let gy=0;gy<rows-1;gy++) for(let gx=0;gx<cols-1;gx++){
     if(!gapD[gy][gx]) continue;
     ctx.fillStyle=gapDColors[`${gx},${gy}`]||drawColor;
     ctx.fillRect(pad+(gx+1)*total-gapSz, pad+(gy+1)*total-gapSz, gapSz, gapSz);
   }
+  // Cells with smart radius
   grid.forEach((row,y)=>row.forEach((v,x)=>{
     if(!v) return;
     ctx.fillStyle=cellColors[`${x},${y}`]||drawColor;
@@ -2463,6 +2053,7 @@ $id('loadFileInput').addEventListener('change',e=>{
   rd.readAsText(f); e.target.value='';
 });
 
+/* دالة موحدة لتحميل JSON — تتحقق من صحة الملف */
 function loadKufiJSON(text){
   try{
     const d=JSON.parse(text);
@@ -2499,19 +2090,16 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();exportCanvas(true);}
   if(!e.ctrlKey&&!e.metaKey){
     if(e.key==='b'||e.key==='B')setTool('draw');
-    if(e.key==='w'||e.key==='W')setTool('brush');
     if(e.key==='e'||e.key==='E')setTool('erase');
     if(e.key==='f'||e.key==='F')setTool('fill');
     if(e.key==='h'||e.key==='H')setTool('pan');
     if(e.key==='s'||e.key==='S')setTool('select');
-    if(tool==='select'){
-      if(e.key==='ArrowUp'){e.preventDefault();SEL.nudge(0,-1);}
-      if(e.key==='ArrowDown'){e.preventDefault();SEL.nudge(0,1);}
-      if(e.key==='ArrowLeft'){e.preventDefault();SEL.nudge(-1,0);}
-      if(e.key==='ArrowRight'){e.preventDefault();SEL.nudge(1,0);}
-      if(e.key==='Enter'){e.preventDefault();SEL.phase==='float'?SEL.finalStamp():SEL.commit();}
-      if(e.key==='Escape'){SEL.reset();}
-    if(tool==='brush'&&e.key==='Escape') BRUSH.reset();
+    if(tool==='select'&&selState==='selected'){
+      if(e.key==='ArrowUp'){e.preventDefault();moveSelection(0,-1);}
+      if(e.key==='ArrowDown'){e.preventDefault();moveSelection(0,1);}
+      if(e.key==='ArrowLeft'){e.preventDefault();moveSelection(-1,0);}
+      if(e.key==='ArrowRight'){e.preventDefault();moveSelection(1,0);}
+      if(e.key==='Escape')clearSelection();
     }
   }
 });
@@ -2526,6 +2114,7 @@ window.addEventListener('keydown',e=>{
   buildSwatches();
   setTool('draw');
   initRulers();
+  // Hook grid changes for session autosave
   const origRenderGrid=renderGrid;
   window.renderGrid=function(){origRenderGrid.apply(this,arguments);scheduleSessionSave?.();};
   initWelcome();
@@ -2536,14 +2125,21 @@ if(location.search.includes('share-target')){
   window.addEventListener('load', async ()=>{
     try{
       const cache = await caches.open('kufimaker-share');
+      // صورة مرجعية
       const imgRes = await cache.match('shared-image');
       if(imgRes){
         const blob = await imgRes.blob();
         const url  = URL.createObjectURL(blob);
         await cache.delete('shared-image');
-        setTimeout(()=>{ setBgImage(url); const drag=$id('bgDraggable'); if(drag) drag.checked=true; openSheet('bg'); }, 600);
+        setTimeout(()=>{
+          setBgImage(url);
+          const drag=$id('bgDraggable');
+          if(drag) drag.checked=true;
+          openSheet('bg');
+        }, 600);
         return;
       }
+      // ملف JSON
       const jsonRes = await cache.match('shared-json');
       if(jsonRes){
         const text = await jsonRes.text();
@@ -2575,7 +2171,7 @@ window.addEventListener('appinstalled',()=>{
   deferredPrompt=null;
 });
 
-/* ══════════ SERVICE WORKER ══════════ */
+/* ══════════ SERVICE WORKER REGISTRATION ══════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/kufiMaker/sw.js', { scope: '/kufiMaker/' })
