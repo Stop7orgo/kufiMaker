@@ -2578,7 +2578,7 @@ window.addEventListener('appinstalled',()=>{
 /* ══════════ SERVICE WORKER ══════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/kufiMaker/sw.js', { scope: '/kufiMaker/' })
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('[SW] Registered, scope:', reg.scope))
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
