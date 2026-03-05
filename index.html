@@ -148,7 +148,7 @@
 <div id="sheetOverlay">
   <div id="bottomSheet" dir="rtl">
     <div class="bs-handle"></div>
-    <div style="display:none;align-items:center;padding:8px 16px 0;">
+    <div style="display:flex;align-items:center;padding:8px 16px 0;">
       <div class="bs-tabs" id="bsTabs" style="flex:1;padding:0;">
         <div class="bs-tab active" data-sheet="tools">أدوات</div>
         <div class="bs-tab" data-sheet="grid">الشبكة</div>
@@ -437,35 +437,67 @@
           <div style="font-size:12px;color:var(--muted);margin-top:3px;">محرر الخط الكوفي المربع</div>
         </div>
       </div>
-      
+
+            <!-- Legal & FAQ buttons -->
+      <div style="display:flex; gap:8px; margin:8px 4px 0; flex-wrap:wrap;">
+  
+  <!-- سياسة الخصوصية - أيقونة درع (shield) -->
+  <button class="tb-panel-btn" onclick="openSheet('privacy')" style="min-width:20%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    <span>سياسة الخصوصية</span>
+  </button>
+
+  <!-- الشروط والأحكام - أيقونة مستند/ورقة مع علامة صح (document + check) -->
+  <button class="tb-panel-btn" onclick="openSheet('terms')" style="min-width:20%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <polyline points="9 15 11 17 15 13"/>
+    </svg>
+    <span>الشروط والأحكام</span>
+  </button>
+
+  <!-- الأسئلة والتوجيهات (FAQ) - أيقونة علامة استفهام داخل دائرة -->
+  <button class="tb-panel-btn" onclick="openSheet('faq')" style="min-width:20%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span>الأسئلة والتوجيهات</span>
+  </button>
+
+  <button class="tb-panel-btn" id="btnReset" style="min-width:10%;" data-tip="إعادة تهيئة شاملة">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </svg>
+    <span>تهيئة</span>
+  </button>
+
+  <button class="tb-panel-btn" id="btnInstall" data-tip="تثبيت التطبيق" style="min-width:12%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    <span>تثبيت</span>
+  </button>
+
+</div>
+    
       <!-- Reset -->
       <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:10px 4px;border:1px solid var(--border);">
         <div class="sec"> تعريف بالتطبيق </div>
-      <div style="position:absolute;top:10px;left:20px;display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
-      <button class="tb-panel-btn" id="btnReset" data-tip="إعادة تهيئة شاملة">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-         <span>تهيئة</span>
-      </button>
-      <button class="tb-panel-btn" id="btnInstall" data-tip="تثبيت التطبيق" 
-         style="display:content;">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-         <span>تثبيت</span>
-      </button>
-      </div>
         <div style="font-size:12px;color:var(--muted);line-height:1.8;text-align:right;">
           أداة مجانية ومفتوحة المصدر لتصميم الخط الكوفي المربع.<br/>
           تعمل بالكامل في المتصفح — بدون خادم أو بيانات خاصة.
         </div>
       </div>
-      
-      <!-- Legal & FAQ buttons -->
-      <div style="display:flex;gap:8px;margin:8px 4px 0;flex-wrap:wrap;">
-        <button class="s-btn" onclick="openSheet('privacy')" style="flex:1;font-size:12px;min-width:80px;">🕶️ الخصوصية</button>
-        <button class="s-btn" onclick="openSheet('terms')"   style="flex:1;font-size:12px;min-width:80px;">📃 الشروط</button>
-        <button class="s-btn" onclick="openSheet('faq')"     style="flex:1;font-size:12px;min-width:80px;">⁉️ الأسئلة</button>
-      </div>
 
-      <!-- Developer -->
+            <!-- Developer -->
       <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin:8px 4px 0;">
   
   <!-- المطور البشري -->
@@ -475,8 +507,8 @@
     </div>
     <div>
       <div style="font-size:14px;font-weight:700;">ab7dz</div>
-      <div style="font-size:11px;color:var(--muted);">المطور · الفكرة والتصميم</div>
-      <a style="font-size:11px;color:var(--accent2);" href="/cdn-cgi/l/email-protection#660e0715071f091326010b070f0a4805090b"><span class="__cf_email__" data-cfemail="781e190c0c170d1519381f1914561c02">[email&#160;protected]</span></a>
+      <div style="font-size:11px;color:var(--muted);">بواسطة حسناوي (الجزائر) · الفكرة والتصميم</div>
+      <a style="font-size:11px;color:var(--accent2);" href="mailto:hasayou@gmail.com">fattouma@gal.dz</a>
     </div>
   </div>
 
@@ -489,13 +521,14 @@
       🤖
     </div>
     <div>
-      <div style="font-size:14px;font-weight:700;">Claude Sonnet 4.6</div>
+      <div style="font-size:14px;font-weight:700;">C.S.4.6</div>
       <div style="font-size:11px;color:var(--muted);">بواسطة Anthropic · البرمجة والتنفيذ</div>
       <a style="font-size:11px;color:var(--accent2);" href="https://claude.ai" target="_blank">claude.ai</a>
     </div>
   </div>
 
-</div>
+    </div>
+
 
       <!-- Links -->
       <div style="display:flex;flex-direction:column;gap:6px;margin:8px 4px 0;">
@@ -546,13 +579,11 @@
           يُقدَّم التطبيق كما هو. المطور غير مسؤول عن أي خسارة في البيانات.<br/><br/>
           <!-- أضف ملاحظاتك هنا -->
           <b style="color:var(--text);">الترخيص</b></br>
-          أنت مرخص لك بموجب هذه الاتفاقية باستخدام هذا التطبيق للأغراض
-الشخصية غير التجارية فقط
-</br>
-للحصول على إذن تجاري أو أي استفسار:
-  → افتح Issue على GitHub
-  → https://github.com/ab7dz/kufiMaker
-  </br>
+          أنت مرخص لك بموجب هذه الاتفاقية باستخدام هذا التطبيق للأغرض الشخصية غير التجارية فقط
+          </br> للحصول على إذن تجاري أو أي استفسار:
+          → افتح Issue على GitHub
+          → https://github.com/ab7dz/kufiMaker
+          </br>
         </div>
       </div>
     </div>
