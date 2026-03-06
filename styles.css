@@ -150,7 +150,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);dis
   background:var(--surface);
   border-radius:22px 22px 0 0;
   border-top:1px solid var(--border);
-  height:82vh; min-height:300px;
+  height:75vh; min-height:300px;
   display:flex;flex-direction:column;
   transform:translateY(102%);
   transition:transform .32s cubic-bezier(.4,0,.2,1);
@@ -641,3 +641,15 @@ input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;}
 /* BG DRAG TOGGLE */
 #btnBgDragToggle.active{background:rgba(66,165,245,0.18);color:#42A5F5;box-shadow:0 0 0 2px rgba(66,165,245,0.35);}
 #btnBgDragToggle.active svg{stroke:#42A5F5;}
+
+/* ── SEL active indicators ── */
+.tool-btn[data-tool="select"].sel-active {
+  background: rgba(99,102,241,0.28);
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.55);
+  color: #a5b4fc;
+}
+.tool-btn[data-tool="erase"].sel-action {
+  background: rgba(239,68,68,0.22);
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.45);
+  color: #fca5a5;
+}
