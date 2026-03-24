@@ -4,7 +4,7 @@
 
 **Square Kufic Script Editor — محرر الخط الكوفي المربع**
 
-[🚀 Try it live / جرّب مباشرة](https://stop7orgo.github.io/kufiMaker/)
+[🚀 Try it live / جرّب مباشرة](https://ab7dz.github.io/kufiMaker/)
 
 ## تحميل التطبيق (Android APK)
 
